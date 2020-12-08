@@ -29,7 +29,7 @@ The "helper" also works perfectly with JTAlert, GridTracker, and logging add-ons
 
 You can continue to use the familiar WSJT-X user interface (and keep up with with all the new features, like FST4 and FST4W), instead of learning a confusing "alternate" FT8 program with it's predictably badly-designed screens.
 
-Interested? Let me know. If you use it, and want something additional, I'm open to modifying it *for you* (not all hams write code!). (moar.avantol at xoxy.net)
+Interested? Let me know. If you use it, and want something additional, I'm open to possibly modifying it *for you* (not all hams write code!). (moar.avantol at xoxy.net)
 
 About WSJT-X automation: My take is that FT8 is  no different from "two-way WSPR", except you can advance toward your goals (like WAS and DXCC) as you test and improve your system!!! Isn't the only real goal of FT8 to collect call signs? Isn't it helpful to other hams when you can do it more efficiently? It cetainly matters to me, being in Wyoming... I'm flooded with constant calls and requests.
 
@@ -40,9 +40,10 @@ Note: The rules about "control operator present" apply, of course. This program 
 Notes on installing the modified WSJT-X program:
 - If you already have WSJT-X installed, you may want to install the modified WSJT-X program in an alternate destination folder. Neither version will interfere with the other, you can run both at will, and they share the same settings and preferences.
 - The source code for the modified WSJTY-X is supplied for your inspection, or modification, if you like: https://github.com/avantol/WSJT-X2-2-2-mod
-- The modifications to WSJT-X are minimal, allowing easy modification to future versions of WSJT-X to be adpated quickly as they are released (release candidates are not included in this, they change fast and break things).
-- Modifying WSJT-X as *lightly as possible* was the whole idea behind the QSJT-X Controller. I *heavily* modified WSJT-X 2.0.0 two years ago, and knmew that I would not want to port the changes to later versions. So, using UDP to link the controller and a lightly-modified WSJT-X makes this effort "future-proof".
+- The modifications to WSJT-X are minimal, allowing easy modification to future versions of WSJT-X as they are released (release candidates are not included in this, they change fast and break things).
+- Modifying WSJT-X as *lightly as possible* was the whole idea behind the QSJT-X Controller. I *heavily* modified WSJT-X 2.0.0 two years ago (https://sourceforge.net/u/k9avt/wsjt/ci/master/tree/), and knew that I would not want to port the changes to later versions. So, using UDP to link the controller and a lightly-modified WSJT-X makes this effort "future-proof".
 - The UDP address/port for the WSJT-X Controller "listener" role (about the same as a "server" role here) is set to 239.255.0.0 and port 2237, same as GridTracker uses. Note that JTAlert configures the listener port dynamically. Be sure to set the WSJT-X "UDP Server" (Settings|Reporting tab) to address 239.255.0.0 and port 2237, all check boxes ticked.
 
-*end*
+--end--
+
 
