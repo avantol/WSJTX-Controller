@@ -3,10 +3,12 @@
 
 WSJTX Controller is a "helper" program that runs alongside WSJT-X, apparently the most popular ham radio program of all time. This "helper" does a lot of the boring WSJT-X manual work for you. (You will need to install a slightly-modified WSJT-X program, available at https://github.com/avantol/WSJT-X2-2-2-mod, more info below)
 
-Its "Basic" mode is completely hands-off, the helper simply queues up calls to you, that come in while you're working another call:
+Its "Basic" mode is completely hands-off, the helper simply queues up calls to you, 
+that come in while you're working another call:
 ![image](https://user-images.githubusercontent.com/5302633/101517114-96c1be80-393d-11eb-925b-0fd52c70753e.png)
 
-Once you get familiar with how the basics work, you can select "More options":
+Once you get familiar with how the basics work, 
+you can select "More options":
 ![image](https://user-images.githubusercontent.com/5302633/101517329-df797780-393d-11eb-8b0e-e43ea2b0f3a2.png)
 
 Now you can do things like:
@@ -36,7 +38,7 @@ Note: The rules about "control operator present" apply, of course. This program 
 
 Notes on installing the modified WSJT-X program:
 - If you already have WSJT-X installed, you may want to install the modified WSJT-X program in an alternate destination folder. Neither version will interfere with the other, you can run both at will, and they share the same settings and preferences.
-- The source code for the modified WSJTY-X is supplied for your inspection, or modification, if you like.
+- The source code for the modified WSJTY-X is supplied for your inspection, or modification, if you like: https://github.com/avantol/WSJT-X2-2-2-mod
 - The modifications to WSJT-X are minimal, allowing easy modification to future versions of WSJT-X to be adpated quickly as they are released (release candidates are not included in this, they change fast and break things).
 - Modifying WSJT-X as *lightly as possible* was the whole idea behind the QSJT-X Controller. I *heavily* modified WSJT-X 2.0.0 two years ago, and knmew that I would not want to port the changes to later versions. So, using UDP to link the controller and a lightly-modified WSJT-X makes this effort "future-proof".
 - The UDP address/port for the WSJT-X Controller "listener" role (about the same as a "server" role here) is set to 239.255.0.0 and port 2237, same as GridTracker uses. Note that JTAlert configures the listener port dynamically. Be sure to set the WSJT-X "UDP Server" (Settings|Reporting tab) to address 239.255.0.0 and port 2237, all check boxes ticked.
