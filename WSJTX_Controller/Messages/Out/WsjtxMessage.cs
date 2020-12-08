@@ -71,10 +71,15 @@ namespace WsjtxUdpLib.Messages.Out
             return s;
         }
 
-        public static bool Is73(string msg)
+        //there are grid codes that *contain* "73", so test for *exactly* "73";
+        //msgs in the form "W1AW K1JT 73" or "W1AW K1JT RR73";
+        //custom 73 msgs are not acceptable
+        public static bool Is73orRR73(string msg)
         {
             if (msg == null) return false;
-            return msg.Contains("73") || msg.Contains("RR73");
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Count() != 3) return false;
+            return (words[2] == "73" || words[2] == "RR73");
         }
 
         public static bool IsCQ(string msg)
@@ -88,7 +93,7 @@ namespace WsjtxUdpLib.Messages.Out
             if (msg == null) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
-            return (words[2].Contains("RRR"));
+            return (words[2] == "RRR");
         }
 
         //msg in the form "W1AW K1JT R-03" or "W1AW K1JT R+12"
@@ -118,7 +123,7 @@ namespace WsjtxUdpLib.Messages.Out
             if (msg == null) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
-            if (IsRogerReport(msg) || IsRogers(msg) || IsCQ(msg) || Is73(msg)) return false;
+            if (IsRogerReport(msg) || IsRogers(msg) || IsCQ(msg) || Is73orRR73(msg)) return false;
             if (words[2].Length != 4) return false;
             int i;
             if (!int.TryParse(words[2].Substring(2, 2), out i)) return false;
@@ -135,7 +140,7 @@ namespace WsjtxUdpLib.Messages.Out
             if (msg == null) return null;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 4) return null;
-            if (!words[0].Contains("CQ")) return null;
+            if (words[0] != "CQ") return null;
             return words[1];
         }
         public static void Reinit() {

@@ -149,7 +149,7 @@ namespace WSJTX_Controller
             ctrl.altListBox.DataSource = altCallList;
 
             string cast = multicast ? "(multicast)" : "(unicast)";
-            ctrl.verLabel.Text = $"by WM8Q v{pgmVer} IP addr: {ipAddress}.{port} {cast}";
+            ctrl.verLabel.Text = $"by WM8Q v{pgmVer} IP addr: {ipAddress}:{port} {cast}";
             ctrl.verLabel2.Text = $"Want more features? more.avantol@xoxy.net";
 
             ctrl.alertTextBox.Enabled = false;
@@ -737,7 +737,7 @@ namespace WSJTX_Controller
 
             //check for QSO complete, next in call queue to be processed
             // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
-            if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73(txMsg))
+            if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
             {
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
