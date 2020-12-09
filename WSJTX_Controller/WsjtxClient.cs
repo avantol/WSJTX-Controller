@@ -717,7 +717,7 @@ namespace WSJTX_Controller
             //Console.WriteLine($"{Time()} Timer tick done\n");
         }
 
-        //check for time to log (must be done at Tx start to avoid loggomh/dequeueing timing problem if done at Tx end)
+        //check for time to log (best done at Tx start to avoid any logging/dequeueing timing problem if done at Tx end)
         private void processTxStart()
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
@@ -747,9 +747,10 @@ namespace WSJTX_Controller
                     Console.WriteLine($"     ~normal logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
                 }
             }
-            Console.WriteLine($"\n{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+            Console.WriteLine($"\n{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'\n");
         }
 
+        //check for QSO end or timeout (and possibly logging (if txMsg changed between TX start and Tx end)
         private void processTxEnd()
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
@@ -765,6 +766,15 @@ namespace WSJTX_Controller
                 Console.WriteLine($"     #Call selected manually in WSJT-X: invalidated replyCmd:'{replyCmd}' reset xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout}");
             }
 
+            //check for time to log early; NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
+            //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
+            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
+            {
+                LogQso(toCall);
+                qsoLogged = true;
+                ShowStatus();
+                Console.WriteLine($"     #early logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
+            }
             //check for QSO complete, trigger next call in the queue
             // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
             if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
@@ -772,6 +782,14 @@ namespace WSJTX_Controller
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
                 Console.WriteLine($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount: {xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}");
+                //NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
+                if (!qsoLogged)
+                {
+                    LogQso(toCall);
+                    qsoLogged = true;
+                    ShowStatus();
+                    Console.WriteLine($"     #normal logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
+                }
             }
 
             //count tx cycles: check for changed "to" call in WSJT-X

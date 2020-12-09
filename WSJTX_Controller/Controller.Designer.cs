@@ -421,7 +421,7 @@
             // useRR73CheckBox
             // 
             this.useRR73CheckBox.AutoSize = true;
-            this.useRR73CheckBox.Location = new System.Drawing.Point(137, 12);
+            this.useRR73CheckBox.Location = new System.Drawing.Point(138, 12);
             this.useRR73CheckBox.Name = "useRR73CheckBox";
             this.useRR73CheckBox.Size = new System.Drawing.Size(98, 17);
             this.useRR73CheckBox.TabIndex = 27;
@@ -445,9 +445,9 @@
             this.logEarlyCheckBox.AutoSize = true;
             this.logEarlyCheckBox.Location = new System.Drawing.Point(13, 35);
             this.logEarlyCheckBox.Name = "logEarlyCheckBox";
-            this.logEarlyCheckBox.Size = new System.Drawing.Size(168, 17);
+            this.logEarlyCheckBox.Size = new System.Drawing.Size(247, 17);
             this.logEarlyCheckBox.TabIndex = 25;
-            this.logEarlyCheckBox.Text = "Log early, when sending RRR";
+            this.logEarlyCheckBox.Text = "Log early, when sending RRR (recommended!)";
             this.logEarlyCheckBox.UseVisualStyleBackColor = true;
             this.logEarlyCheckBox.Visible = false;
             // 
@@ -464,7 +464,7 @@
             // directedTextBox
             // 
             this.directedTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.directedTextBox.Location = new System.Drawing.Point(137, 77);
+            this.directedTextBox.Location = new System.Drawing.Point(138, 77);
             this.directedTextBox.Name = "directedTextBox";
             this.directedTextBox.Size = new System.Drawing.Size(115, 20);
             this.directedTextBox.TabIndex = 23;
@@ -487,7 +487,7 @@
             // loggedCheckBox
             // 
             this.loggedCheckBox.AutoSize = true;
-            this.loggedCheckBox.Location = new System.Drawing.Point(139, 103);
+            this.loggedCheckBox.Location = new System.Drawing.Point(140, 103);
             this.loggedCheckBox.Name = "loggedCheckBox";
             this.loggedCheckBox.Size = new System.Drawing.Size(117, 17);
             this.loggedCheckBox.TabIndex = 21;
@@ -510,7 +510,7 @@
             // alertTextBox
             // 
             this.alertTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.alertTextBox.Location = new System.Drawing.Point(153, 490);
+            this.alertTextBox.Location = new System.Drawing.Point(154, 490);
             this.alertTextBox.Name = "alertTextBox";
             this.alertTextBox.Size = new System.Drawing.Size(115, 20);
             this.alertTextBox.TabIndex = 20;
