@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using WsjtxUdpLib;
 using System.Net;
+using System.Configuration;
 
 
 namespace WSJTX_Controller
@@ -43,6 +44,9 @@ namespace WSJTX_Controller
             SuspendLayout();
             AllocConsole();
 
+            //Properties.Settings.Default.Upgrade();
+            //Properties.Settings.Default.Save();
+
             if (!Properties.Settings.Default.debug)
             {
                 ShowWindow(GetConsoleWindow(), 0);
@@ -54,7 +58,7 @@ namespace WSJTX_Controller
             string ipAddress = Properties.Settings.Default.ipAddress;
             int port = Properties.Settings.Default.port;
             bool multicast = Properties.Settings.Default.multicast;
-            wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Resources.Version, Properties.Settings.Default.debug);
+            wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Settings.Default.debug);
 
             timeoutNumUpDown.Value = Properties.Settings.Default.timeout;
             directedCheckBox.Checked = Properties.Settings.Default.useDirected;

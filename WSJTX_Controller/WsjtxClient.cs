@@ -4,6 +4,8 @@
 using WsjtxUdpLib.Messages;
 using WsjtxUdpLib.Messages.Out;
 using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 //using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -25,7 +27,6 @@ namespace WSJTX_Controller
         public int port;
         public IPAddress ipAddress;
         public bool multicast;
-        public string pgmVer;
         public bool debug;
         public bool advanced;
 
@@ -107,14 +108,18 @@ namespace WSJTX_Controller
         }
         private OpModes opMode = OpModes.READY;
 
-        public WsjtxClient(Controller c, IPAddress reqIpAddress, int reqPort, bool reqMulticast, string reqVer, bool reqDebug)
+        public WsjtxClient(Controller c, IPAddress reqIpAddress, int reqPort, bool reqMulticast, bool reqDebug)
         {
             ctrl = c;           //used for accessing/updating UI
             ipAddress = reqIpAddress;
             port = reqPort;
             multicast = reqMulticast;
-            pgmVer = reqVer;
-            WsjtxMessage.PgmVersion = reqVer;
+            //major.minor.build.private
+            string allVer = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
+            Version v;
+            Version.TryParse(allVer, out v);
+            string fileVer = $"{v.Major}.{v.Minor}.{v.Build}";
+            WsjtxMessage.PgmVersion = fileVer;
             debug = reqDebug;
 
             if (multicast)
@@ -149,7 +154,7 @@ namespace WSJTX_Controller
             ctrl.altListBox.DataSource = altCallList;
 
             string cast = multicast ? "(multicast)" : "(unicast)";
-            ctrl.verLabel.Text = $"by WM8Q v{pgmVer} IP addr: {ipAddress}:{port} {cast}";
+            ctrl.verLabel.Text = $"by WM8Q v{fileVer} IP addr: {ipAddress}:{port} {cast}";
             ctrl.verLabel2.Text = $"Want more features? more.avantol@xoxy.net";
 
             ctrl.alertTextBox.Enabled = false;
@@ -349,7 +354,7 @@ namespace WSJTX_Controller
                                                 ba = rmsg.GetBytes();
                                                 udpClient2.Send(ba, ba.Length);
                                                 replyCmd = dmsg.Message;        //save the last reply cmd to determine which call is in progress
-                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg}\nreplyToReq:{replyCmd}");
+                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg}\nreplyToReq:'{replyCmd}'");
                                                 decodedMsgReplied = true;       //no more replies during rest of pass(es) in current decoding phases
                                            }
                                             else   //not CALLING or a decode already replied to this cycle
@@ -418,7 +423,7 @@ namespace WSJTX_Controller
                         QsoLoggedMessage lmsg = (QsoLoggedMessage)msg;
                         if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
                         qCall = lmsg.DxCall;
-                        if (!logList.Contains(qCall)) logList.Add(qCall);    //if not already logged this mode/band
+                        logList.Add(qCall);    //even if already logged this mode/band
                         ShowLogged();
                         Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
                         UpdateDebug();
@@ -472,6 +477,7 @@ namespace WSJTX_Controller
                             ctrl.timer2.Start();
                             Console.WriteLine($"\n{Time()} Tx start, timer started: {ctrl.timer2.Interval} msec");
                             decodedMsgReplied = false;          //decode passes finished
+                            processTxStart();
                         }
                         else                //end of transmit
                         {
@@ -648,7 +654,7 @@ namespace WSJTX_Controller
             if (txTimeout)        //important to sync qso logged to end of xmit
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
-                Console.WriteLine($"\n{Time()}CheckNextXmit start, txTimeout:{txTimeout} replyCmd:{replyCmd} tCall:{tCall}");   //tempOnly
+                Console.WriteLine($"\n{Time()}CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");   //tempOnly
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
                 if (txTimeout && tCall != null)     //null if call added manually, and must be processed below
@@ -678,7 +684,7 @@ namespace WSJTX_Controller
                     ba = rmsg.GetBytes();
                     udpClient2.Send(ba, ba.Length);
                     replyCmd = dmsg.Message;            //save the last reply cmd to determine which call is in progress
-                    Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg} lastTxMsg:'{lastTxMsg}'\nreplyCmd:{replyCmd}");
+                    Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg} lastTxMsg:'{lastTxMsg}'\nreplyCmd:'{replyCmd}'");
                 }
                 else            //no queued call signs, start CQing
                 {
@@ -692,12 +698,12 @@ namespace WSJTX_Controller
                     Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:\n{emsg}");
                     qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
                     replyCmd = null;        //invalidate last reply cmd since not replying
-                    Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState} replyCmd:{replyCmd})");
+                    Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
                     lastQsoState = qsoState;
                 }
                 txTimeout = false;              //ready for next timeout
                 qsoLogged = false;              //clear "logged" status display
-                Console.WriteLine($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} replyCmd:{replyCmd} qsoLogged:{qsoLogged}\n");
+                Console.WriteLine($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}\n");
                 ShowStatus();
             }
             UpdateDebug();
@@ -711,6 +717,39 @@ namespace WSJTX_Controller
             //Console.WriteLine($"{Time()} Timer tick done\n");
         }
 
+        //check for time to log (must be done at Tx start to avoid loggomh/dequeueing timing problem if done at Tx end)
+        private void processTxStart()
+        {
+            string toCall = WsjtxMessage.ToCall(txMsg);
+            string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
+            Console.WriteLine($"\n{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+
+            //check for time to log early
+            //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
+            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
+            {
+                LogQso(toCall);
+                qsoLogged = true;
+                ShowStatus();
+                Console.WriteLine($"     ~early logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
+            }
+
+            //check for QSO complete, normal logging
+            // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
+            if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
+            {
+                Console.WriteLine($"     ~is 73, was RRR/R+XX, qsoLogged:{qsoLogged}");
+                if (!qsoLogged)
+                {
+                    LogQso(toCall);
+                    qsoLogged = true;
+                    ShowStatus();
+                    Console.WriteLine($"     ~normal logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
+                }
+            }
+            Console.WriteLine($"\n{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+        }
+
         private void processTxEnd()
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
@@ -722,33 +761,17 @@ namespace WSJTX_Controller
             if (replyCmd != null && txMsg != null && toCall != deCall)
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
-                Console.WriteLine($"     #Call selected manually in WSJT-X: invalidated replyCmd:{replyCmd}");
+                xmitCycleCount = 0;     //stop any timeout, since new call
+                Console.WriteLine($"     #Call selected manually in WSJT-X: invalidated replyCmd:'{replyCmd}' reset xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout}");
             }
 
-            //check for time to log early
-            //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
-             if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
-            {
-                LogQso(toCall);
-                qsoLogged = true;
-                ShowStatus();
-                Console.WriteLine($"{Time()} Early logging {toCall} qsoLogged:{qsoLogged}");
-            }
-
-            //check for QSO complete, next in call queue to be processed
+            //check for QSO complete, trigger next call in the queue
             // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
             if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
             {
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
                 Console.WriteLine($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount: {xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}");
-                if (txTimeout && !qsoLogged)
-                {
-                    LogQso(toCall);
-                    qsoLogged = true;
-                    ShowStatus();
-                    Console.WriteLine($"{Time()} Logging {toCall} qsoLogged:{qsoLogged}");
-                }
             }
 
             //count tx cycles: check for changed "to" call in WSJT-X
@@ -1473,7 +1496,7 @@ private bool RemoveCall(string call)
             else 
             {
                 ctrl.timeoutLabel.Visible = true;
-                switch (Math.Max(1, ctrl.timeoutNumUpDown.Value - xmitCycleCount))
+                switch (Math.Max(1, ctrl.timeoutNumUpDown.Value - xmitCycleCount - 1))
                 { 
                     case 1:
                         ctrl.timeoutLabel.ForeColor = System.Drawing.Color.Red;
