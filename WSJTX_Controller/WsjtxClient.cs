@@ -209,12 +209,12 @@ namespace WSJTX_Controller
             {
                 Console.WriteLine(msg);
                 HeartbeatMessage imsg = (HeartbeatMessage)msg;
-                if (!acceptableWsjtxVersions.Contains(imsg.Version))
+                if (!acceptableWsjtxVersions.Contains(imsg.Version) || imsg.Version == "2.2.2" && imsg.Revision == "0d9b96")
                 {
                     WsjtxMessage.NegoState = WsjtxMessage.NegoStates.FAIL;
                     Console.WriteLine($"{Time()} NegoState: FAIL");
                     Console.Beep();
-                    failReason = $"WSJT-X v{imsg.Version} is not supported";
+                    failReason = $"WSJT-X v{imsg.Version} {imsg.Revision} not supported";
                     Console.WriteLine($"{Time()} {failReason}");
                     ShowStatus();
                 }

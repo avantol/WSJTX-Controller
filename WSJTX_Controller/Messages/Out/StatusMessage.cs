@@ -113,10 +113,13 @@ namespace WsjtxUdpLib.Messages.Out
                 statusMessage.FrequencyTolerance = DecodeNullableQUInt32(message, ref cur);
                 statusMessage.TRPeriod = DecodeNullableQUInt32(message, ref cur);
                 statusMessage.ConfigurationName = DecodeString(message, ref cur);
-                statusMessage.LastTxMsg = DecodeString(message, ref cur);
-                statusMessage.QsoProgress = DecodeQUInt32(message, ref cur);
-                statusMessage.TxFirst = DecodeBool(message, ref cur);
-                statusMessage.CqOnly = DecodeBool(message, ref cur);
+                if (cur < message.Length)
+                {
+                    statusMessage.LastTxMsg = DecodeString(message, ref cur);
+                    statusMessage.QsoProgress = DecodeQUInt32(message, ref cur);
+                    statusMessage.TxFirst = DecodeBool(message, ref cur);
+                    statusMessage.CqOnly = DecodeBool(message, ref cur);
+                }
             }
 
             return statusMessage;
