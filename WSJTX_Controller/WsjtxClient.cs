@@ -1072,8 +1072,8 @@ private bool RemoveCall(string call)
 
         public void Closing()
         {
-            //try
-            //{
+            try
+            {
                 if (udpClient2 != null)
                 {
                     //notify WSJT-X
@@ -1087,19 +1087,19 @@ private bool RemoveCall(string call)
                     Thread.Sleep(500);
                     udpClient2.Close();
                 }
-                //if (udpClient != null) udpClient.Close();     //causes unresolvable "disposed object" problem at EndReceive
-            //}
-            //catch (Exception e)         //udpClient might be disposed already
-            //{
-            //    Console.WriteLine($"{Time()} Error at Closing, udpClient:{udpClient} udpClient2:{udpClient2}");
-            //}
+                if (udpClient != null) udpClient.Close();     //causes unresolvable "disposed object" problem at EndReceive
+            }
+            catch (Exception e)         //udpClient might be disposed already
+            {
+                Console.WriteLine($"{Time()} Error at Closing, udpClient:{udpClient} udpClient2:{udpClient2}");
+            }
         }
         public void Dispose()
         {
-            udpClient.Dispose();
-            udpClient = null;
-            udpClient2.Dispose();
-            udpClient2 = null;
+            //udpClient.Dispose();
+            //udpClient = null;
+            //udpClient2.Dispose();
+            //udpClient2 = null;
         }
 
         [DllImport("winmm.dll", SetLastError = true)]
