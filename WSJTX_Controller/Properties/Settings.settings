@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="timeout" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">4</Value>
+      <Value Profile="(Default)">6</Value>
     </Setting>
     <Setting Name="useDirected" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

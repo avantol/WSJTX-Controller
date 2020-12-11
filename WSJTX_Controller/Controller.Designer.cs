@@ -464,9 +464,9 @@
             // directedTextBox
             // 
             this.directedTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.directedTextBox.Location = new System.Drawing.Point(138, 77);
+            this.directedTextBox.Location = new System.Drawing.Point(143, 77);
             this.directedTextBox.Name = "directedTextBox";
-            this.directedTextBox.Size = new System.Drawing.Size(115, 20);
+            this.directedTextBox.Size = new System.Drawing.Size(110, 20);
             this.directedTextBox.TabIndex = 23;
             this.directedTextBox.Text = "(separate by spaces)";
             this.directedTextBox.Visible = false;
@@ -510,9 +510,9 @@
             // alertTextBox
             // 
             this.alertTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.alertTextBox.Location = new System.Drawing.Point(154, 490);
+            this.alertTextBox.Location = new System.Drawing.Point(159, 490);
             this.alertTextBox.Name = "alertTextBox";
-            this.alertTextBox.Size = new System.Drawing.Size(115, 20);
+            this.alertTextBox.Size = new System.Drawing.Size(110, 20);
             this.alertTextBox.TabIndex = 20;
             this.alertTextBox.Text = "(separate by spaces)";
             this.alertTextBox.Visible = false;
