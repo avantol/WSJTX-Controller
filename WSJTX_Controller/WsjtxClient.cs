@@ -92,7 +92,6 @@ namespace WSJTX_Controller
         private string errorDesc = null;
         private Random rnd = new Random();
         TimeSpan latestDecodeTime;
-        private const int cycleTimerAdj = 300;      //msec
 
         private struct UdpState
         {
@@ -296,7 +295,7 @@ namespace WSJTX_Controller
                     //*************
                     //DecodeMessage
                     //*************
-                    if (msg.GetType().Name == "DecodeMessage")
+                    if (msg.GetType().Name == "DecodeMessage" && myCall != null)
                     {
                         DecodeMessage dmsg = (DecodeMessage)msg;
                         rawMode = dmsg.Mode;    //different from mode string in status msg
@@ -471,11 +470,7 @@ namespace WSJTX_Controller
                     {
                         if (transmitting)
                         {
-                            DateTime dtNow = DateTime.UtcNow;
-                            int diffMsec = ((dtNow.Second * 1000) + dtNow.Millisecond) % (int)trPeriod;
-                            ctrl.timer2.Interval = (2 * (int)trPeriod) - diffMsec - cycleTimerAdj;     //tempOnly
-                            ctrl.timer2.Start();
-                            Console.WriteLine($"\n{Time()} Tx start, timer started: {ctrl.timer2.Interval} msec");
+                            StartTimer2();
                             decodedMsgReplied = false;          //decode passes finished
                             processTxStart();
                         }
@@ -566,7 +561,7 @@ namespace WSJTX_Controller
                                 xmitCycleCount = 0;
                                 Console.WriteLine($"     &Tx enabled during Rx period");
                             }
-                            CheckNextXmit();
+                            CheckNextXmit();            //process the timeout
                         }
                         ShowStatus();
                         lastTxEnabled = txEnabled;
@@ -639,12 +634,20 @@ namespace WSJTX_Controller
                         lastQsoState = qsoState;
                     }
                     UpdateDebug();
-                    CheckNextXmit();        //check for time to initiate next xmit from queued calls
                     return;
                 }
             }
         }
 
+        private void StartTimer2()
+        {
+            DateTime dtNow = DateTime.UtcNow;
+            int diffMsec = ((dtNow.Second * 1000) + dtNow.Millisecond) % (int)trPeriod;
+            int cycleTimerAdj = (mode == "FT8" ? 300 : (mode == "FT4" ? 500 : 0));      //msec
+            ctrl.timer2.Interval = (2 * (int)trPeriod) - diffMsec - cycleTimerAdj;     //tempOnly
+            ctrl.timer2.Start();
+            Console.WriteLine($"\n{Time()} StartTimer2: interval:{ctrl.timer2.Interval} msec");
+        }
         private void CheckNextXmit()
         {
             //******************
@@ -654,7 +657,7 @@ namespace WSJTX_Controller
             if (txTimeout)        //important to sync qso logged to end of xmit
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
-                Console.WriteLine($"\n{Time()}CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");   //tempOnly
+                Console.WriteLine($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");   //tempOnly
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
                 if (txTimeout && tCall != null)     //null if call added manually, and must be processed below
@@ -703,7 +706,7 @@ namespace WSJTX_Controller
                 }
                 txTimeout = false;              //ready for next timeout
                 qsoLogged = false;              //clear "logged" status display
-                Console.WriteLine($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}\n");
+                Console.WriteLine($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
                 ShowStatus();
             }
             UpdateDebug();
@@ -711,10 +714,10 @@ namespace WSJTX_Controller
 
         public void processDecodes()
         {
-            //Console.WriteLine($"\n{Time()} Timer tick: txEnabled: {txEnabled}");
+            Console.WriteLine($"\n{Time()} Timer tick: txEnabled: {txEnabled}");
             ctrl.timer2.Stop();
             if (txEnabled) CheckNextXmit();
-            //Console.WriteLine($"{Time()} Timer tick done\n");
+            Console.WriteLine($"{Time()} Timer tick done\n");
         }
 
         //check for time to log (best done at Tx start to avoid any logging/dequeueing timing problem if done at Tx end)
@@ -722,7 +725,7 @@ namespace WSJTX_Controller
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
-            Console.WriteLine($"\n{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+            Console.WriteLine($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
 
             //check for time to log early
             //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
@@ -747,7 +750,7 @@ namespace WSJTX_Controller
                     Console.WriteLine($"     ~normal logging reqd: toCall:{toCall} qsoLogged:{qsoLogged}");
                 }
             }
-            Console.WriteLine($"\n{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'\n");
+            Console.WriteLine($"{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'\n");
         }
 
         //check for QSO end or timeout (and possibly logging (if txMsg changed between TX start and Tx end)

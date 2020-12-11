@@ -137,7 +137,7 @@ namespace WsjtxUdpLib.Messages.Out
 
         public bool IsCallTo(string myCall)
         {
-            return messageWords.Length > 0 && messageWords[0].Contains(myCall);
+            return myCall != null && messageWords.Length > 0 && messageWords[0].Contains(myCall);
         }
         public bool Is73()
         {
