@@ -96,7 +96,7 @@ namespace WSJTX_Controller
                 alertTextBox.ForeColor = System.Drawing.Color.Black;
             }
 
-            timer1.Interval = 2;
+            timer1.Interval = 5;
             timer1.Start();
 
             if (wsjtxClient.advanced) advButton_Click(null, null);
