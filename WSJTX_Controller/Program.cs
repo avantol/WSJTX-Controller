@@ -16,7 +16,7 @@ namespace WSJTX_Controller
         {
             if (System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetEntryAssembly().Location)).Count() > 1)
             {
-                MessageBox.Show("An instance of this applicvation is already running.");
+                MessageBox.Show("An instance of this application is already running.");
                 return;
             }
             Application.EnableVisualStyles();

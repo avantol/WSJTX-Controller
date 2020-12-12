@@ -48,6 +48,7 @@ namespace WSJTX_Controller
         private bool cQonly = false;
         private int? trPeriod = null;       //msec
         private string replyCmd = null;     //no "reply to" cmd sent to WSJT-X yet
+        private DecodeMessage replyDecode = null;
 
         private WsjtxMessage.QsoStates lastQsoState = WsjtxMessage.QsoStates.INVALID;
         private UdpClient udpClient2;
@@ -172,6 +173,7 @@ namespace WSJTX_Controller
 
         public void UdpLoop()
         {
+            //timer expires at 11-12 msec minimum (due to OS limitations)
             if (messageRecd)
             {
                 Update();
@@ -354,6 +356,7 @@ namespace WSJTX_Controller
                                                 ba = rmsg.GetBytes();
                                                 udpClient2.Send(ba, ba.Length);
                                                 replyCmd = dmsg.Message;        //save the last reply cmd to determine which call is in progress
+                                                replyDecode = dmsg;             //save the decode the reply cmd came from
                                                 Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg', txTimeout:{txTimeout} cmd:\n{rmsg}\nreplyToReq:'{replyCmd}'");
                                                 decodedMsgReplied = true;       //no more replies during rest of pass(es) in current decoding phases
                                            }
@@ -422,17 +425,10 @@ namespace WSJTX_Controller
                         QsoLoggedMessage lmsg = (QsoLoggedMessage)msg;
                         Console.WriteLine(lmsg);         //tempOnly
                         qCall = lmsg.DxCall;
-                        if (qCall == null)
-                        {
-                            Console.WriteLine($"{Time()} QSO logging ack ERROR: qCall is null");
-                        }
-                        else
-                        {
-                            if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
-                            logList.Add(qCall);    //even if already logged this mode/band
-                            ShowLogged();
-                            Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
-                        }
+                        if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
+                        logList.Add(qCall);    //even if already logged this mode/band
+                        ShowLogged();
+                        Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
                         UpdateDebug();
 
                         //check for call sign in queue/dictionary,
@@ -665,6 +661,7 @@ namespace WSJTX_Controller
             if (txTimeout)        //important to sync qso logged to end of xmit
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
+                replyDecode = null;
                 Console.WriteLine($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");   //tempOnly
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
@@ -695,6 +692,7 @@ namespace WSJTX_Controller
                     ba = rmsg.GetBytes();
                     udpClient2.Send(ba, ba.Length);
                     replyCmd = dmsg.Message;            //save the last reply cmd to determine which call is in progress
+                    replyDecode = dmsg;                 //save the decode the reply cmd came from
                     Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg} lastTxMsg:'{lastTxMsg}'\nreplyCmd:'{replyCmd}'");
                 }
                 else            //no queued call signs, start CQing
@@ -709,6 +707,7 @@ namespace WSJTX_Controller
                     Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:\n{emsg}");
                     qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
                     replyCmd = null;        //invalidate last reply cmd since not replying
+                    replyDecode = null;
                     Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
                     lastQsoState = qsoState;
                 }
@@ -722,10 +721,13 @@ namespace WSJTX_Controller
 
         public void processDecodes()
         {
-            Console.WriteLine($"\n{Time()} Timer tick: txEnabled: {txEnabled}");
+            Console.WriteLine($"\n{Time()} Timer2 tick: txEnabled: {txEnabled} txTimeout:{txTimeout}");
+            if (ctrl == null) Console.WriteLine($"ERROR: ctrl is null");            //tempOnly
+            if (ctrl.timer2 == null) Console.WriteLine($"ERROR: timer2 is null");   //tempOnly
             ctrl.timer2.Stop();
+            Console.WriteLine($"     +timer2 stopped");                             //tempOnly
             if (txEnabled) CheckNextXmit();
-            Console.WriteLine($"{Time()} Timer tick done\n");
+            Console.WriteLine($"{Time()} Timer2 tick done\n");
         }
 
         //check for time to log (best done at Tx start to avoid any logging/dequeueing timing problem if done at Tx end)
@@ -734,6 +736,19 @@ namespace WSJTX_Controller
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
             Console.WriteLine($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+            //check for WSJT-X ready to respond to a 73/RR73 that is not from the last Tx 'to'
+            // msg to be sent is 73               msg to be sent 'to'      is not  replyCmd "from' (i.e.: WSJT-X ignored last reply cmd)
+            if (WsjtxMessage.Is73orRR73(txMsg) && replyCmd != null && WsjtxMessage.ToCall(txMsg) != WsjtxMessage.DeCall(replyCmd))
+            {
+                //log the unexpected call sign
+                LogQso(WsjtxMessage.ToCall(txMsg));
+                qsoLogged = true;
+                ShowStatus();
+                Console.WriteLine($"     ~unexpected logging reqd: toCall:{WsjtxMessage.ToCall(txMsg)} qsoLogged:{qsoLogged}");
+                //put the call sign previously in-progress back in the call queue
+                AddCall(replyCmd, replyDecode);
+            }
+
 
             //check for time to log early
             //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
@@ -773,6 +788,7 @@ namespace WSJTX_Controller
             if (replyCmd != null && txMsg != null && toCall != deCall)
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
+                replyDecode = null;
                 xmitCycleCount = 0;     //stop any timeout, since new call
                 Console.WriteLine($"     #Call selected manually in WSJT-X: invalidated replyCmd:'{replyCmd}' reset xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout}");
             }
@@ -1549,30 +1565,37 @@ private bool RemoveCall(string call)
             if (!debug) return;
             string s;
 
-            ctrl.label5.Text = $"xmit: {transmitting.ToString().Substring(0, 1)}";
-            ctrl.label6.Text = $"UDP: {msg.GetType().Name.Substring(0, 6)}";
-            ctrl.label7.Text = $"txEnable: {txEnabled.ToString().Substring(0, 1)}";
+            try             //tempOnly
+            {
+                ctrl.label5.Text = $"xmit: {transmitting.ToString().Substring(0, 1)}";
+                ctrl.label6.Text = $"UDP: {msg.GetType().Name.Substring(0, 6)}";
+                ctrl.label7.Text = $"txEnable: {txEnabled.ToString().Substring(0, 1)}";
 
-            ctrl.label8.Text = $"cmd from: {WsjtxMessage.DeCall(replyCmd)}";
-            ctrl.label9.Text = $"dxCall: {dxCall}";
+                ctrl.label8.Text = $"cmd from: {WsjtxMessage.DeCall(replyCmd)}";
+                ctrl.label9.Text = $"dxCall: {dxCall}";
 
-            string txTo = WsjtxMessage.ToCall(txMsg);
-            s = (txTo == "CQ" ? null : txTo);
-            ctrl.label12.Text = $"tx to: {s}";
-            string inPr = CallInProgress();
-            s = (inPr == "CQ" ? null : txTo);
-            ctrl.label13.Text = $"in-prog: {s}";
+                string txTo = WsjtxMessage.ToCall(txMsg);
+                s = (txTo == "CQ" ? null : txTo);
+                ctrl.label12.Text = $"tx to: {s}";
+                string inPr = CallInProgress();
+                s = (inPr == "CQ" ? null : txTo);
+                ctrl.label13.Text = $"in-prog: {s}";
 
-            ctrl.label14.Text = $"qsoState: {qsoState}";
-            ctrl.label15.Text = $"log call: {qCall}";
+                ctrl.label14.Text = $"qsoState: {qsoState}";
+                ctrl.label15.Text = $"log call: {qCall}";
 
-            //ctrl.label9.Text = $"replyTo: {replyCmd}";
-            //ctrl.label13.Text = $"txMsg: {txMsg}";
+                //ctrl.label9.Text = $"replyTo: {replyCmd}";
+                //ctrl.label13.Text = $"txMsg: {txMsg}";
 
-            ctrl.label10.Text = $"t/o: {txTimeout.ToString().Substring(0, 1)}";
-            ctrl.label11.Text = $"txFirst: {txFirst.ToString().Substring(0, 1)}";
-            ctrl.label16.Text = $"t/o call:{tCall}";
-            ctrl.label17.Text = $"Err: {errorDesc}";
+                ctrl.label10.Text = $"t/o: {txTimeout.ToString().Substring(0, 1)}";
+                ctrl.label11.Text = $"txFirst: {txFirst.ToString().Substring(0, 1)}";
+                ctrl.label16.Text = $"t/o call:{tCall}";
+                ctrl.label17.Text = $"Err: {errorDesc}";
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine($"ERROR: UpdateDebug: err:{err}");
+            }
         }
     }
 }

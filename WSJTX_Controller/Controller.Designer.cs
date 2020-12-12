@@ -598,6 +598,7 @@
             this.Name = "Controller";
             this.Text = "WSJT-X Controller";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Controller_FormClosing);
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Controller_FormClosed);
             this.Load += new System.EventHandler(this.Form_Load);
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();

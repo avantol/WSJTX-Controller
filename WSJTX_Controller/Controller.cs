@@ -96,7 +96,7 @@ namespace WSJTX_Controller
                 alertTextBox.ForeColor = System.Drawing.Color.Black;
             }
 
-            timer1.Interval = 4;
+            timer1.Interval = 10;           //actual is 11-12 msec (due to OS limitations)
             timer1.Start();
 
             if (wsjtxClient.advanced) advButton_Click(null, null);
@@ -131,6 +131,11 @@ namespace WSJTX_Controller
             Properties.Settings.Default.Save();
             //timer1.Stop();
             wsjtxClient.Closing();
+        }
+
+        private void Controller_FormClosed(object sender, FormClosedEventArgs e)
+        {
+
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
