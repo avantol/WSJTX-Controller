@@ -39,10 +39,11 @@ Note: The rules about "control operator present" apply, of course. This program 
 
 Notes on installing the modified WSJT-X program:
 - If you already have WSJT-X installed, you may want to install the modified WSJT-X program in an alternate destination folder. Neither version will interfere with the other, you can run both at will, and they share the same settings and preferences.
+- The UDP address/port for the WSJT-X Controller "listener" role (about the same as a "server" role here) is set to 239.255.0.0 and port 2237, same as GridTracker uses. Note that JTAlert configures the listener port dynamically. Be sure to set the WSJT-X "UDP Server" (Settings|Reporting tab) to address 239.255.0.0 and port 2237, all check boxes ticked.
+- Be sure to set your Tx Watchdog in WSJT-X to something like 30 minutes or more (use File | Settings, or F2 key). The new meaning of the Tx watchdog is: In case WSJT-X Controller loses contact with WSJT-X, after 30 minutes (for example), WSJT-X will stop transmitting.
 - The source code for the modified WSJTY-X is supplied for your inspection, or modification, if you like: https://github.com/avantol/WSJT-X2-2-2-mod
 - The modifications to WSJT-X are minimal, allowing easy modification to future versions of WSJT-X as they are released (release candidates are not included in this, they change fast and break things).
 - Modifying WSJT-X as *lightly as possible* was the whole idea behind the QSJT-X Controller. I *heavily* modified WSJT-X 2.0.0 two years ago (https://sourceforge.net/u/k9avt/wsjt/ci/master/tree/), and knew that I would not want to port the changes to later versions. So, using UDP to link the controller and a lightly-modified WSJT-X makes this effort "future-proof".
-- The UDP address/port for the WSJT-X Controller "listener" role (about the same as a "server" role here) is set to 239.255.0.0 and port 2237, same as GridTracker uses. Note that JTAlert configures the listener port dynamically. Be sure to set the WSJT-X "UDP Server" (Settings|Reporting tab) to address 239.255.0.0 and port 2237, all check boxes ticked.
 
 --end--
 
