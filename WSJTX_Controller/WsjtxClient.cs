@@ -325,7 +325,7 @@ namespace WSJTX_Controller
                             //decode processing of calls to myCall requires txEnabled
                             if (txEnabled && deCall != null && myCall != null && dmsg.IsCallTo(myCall))
                             {
-                                Console.WriteLine($"     *{deCall} is to {myCall}");  //tempOnly
+                                Console.WriteLine($"     *'{deCall}' is to {myCall}");  //tempOnly
                                 // not xmitting yet    
                                 if (/*!transmitting*/ true)      //todo: can process decodes after Tx starts?
                                 {
@@ -334,12 +334,13 @@ namespace WSJTX_Controller
                                         Console.WriteLine($"     *Not a 73");  //tempOnly
                                         if (!callQueue.Contains(deCall))        //call not in queue, possibly enqueue the call data
                                         {
-                                            Console.WriteLine($"     *{deCall} not already in queue");  //tempOnly
+                                            Console.WriteLine($"     *'{deCall}' not already in queue");  //tempOnly
                                             if (qsoState == WsjtxMessage.QsoStates.CALLING && !decodedMsgReplied)
                                             {
-                                                Console.WriteLine($"     *CALLING, no decode replied yet this cycle, reply now");  //tempOnly
+                                                Console.WriteLine($"     *CALLING, no decode replied yet this cycle, reply now txTimeout:{txTimeout}");  //tempOnly
                                                 //WSJT-X CQing, is ready to process this call
                                                 //set WSJT-X call enable with Reply message
+                                                txTimeout = false;   //cancel any pending timeout (like for directed CQ)
                                                 var rmsg = new ReplyMessage();
                                                 rmsg.SchemaVersion = WsjtxMessage.NegotiatedSchemaVersion;
                                                 rmsg.Id = WsjtxMessage.UniqueId;
@@ -353,7 +354,7 @@ namespace WSJTX_Controller
                                                 ba = rmsg.GetBytes();
                                                 udpClient2.Send(ba, ba.Length);
                                                 replyCmd = dmsg.Message;        //save the last reply cmd to determine which call is in progress
-                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg}\nreplyToReq:'{replyCmd}'");
+                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg', txTimeout:{txTimeout} cmd:\n{rmsg}\nreplyToReq:'{replyCmd}'");
                                                 decodedMsgReplied = true;       //no more replies during rest of pass(es) in current decoding phases
                                            }
                                             else   //not CALLING or a decode already replied to this cycle
@@ -362,26 +363,26 @@ namespace WSJTX_Controller
                                                 Console.WriteLine($"     *last Tx 'to':({WsjtxMessage.ToCall(txMsg)}), last cmd 'from':({WsjtxMessage.DeCall(replyCmd)})");     //tempOnly
                                                 if (deCall == CallInProgress())                //call currently being processed by WSJT-X
                                                 {
-                                                    Console.WriteLine($"     *{deCall} currently being processed by WSJT-X:");    //tempOnly
+                                                    Console.WriteLine($"     *'{deCall}' currently being processed by WSJT-X:");    //tempOnly
                                                 }
                                                 else
                                                 {
-                                                    Console.WriteLine($"     *{deCall} not currently being processed by WSJT-X");     //tempOnly
+                                                    Console.WriteLine($"     *'{deCall}' not currently being processed by WSJT-X");     //tempOnly
                                                     AddCall(deCall, dmsg);          //known to not be in queue
                                                 }
                                             }
                                         }
                                         else       //call is already in queue, possibly update the call data
                                         {
-                                            Console.WriteLine($"     *{deCall} already in queue");     //tempOnly
+                                            Console.WriteLine($"     *'{deCall}' already in queue");     //tempOnly
                                             if (deCall == CallInProgress())                //call currently being processed by WSJT-X
                                             {
-                                                Console.WriteLine($"     *{deCall} currently being processed by WSJT-X");     //tempOnly
+                                                Console.WriteLine($"     *'{deCall}' currently being processed by WSJT-X");     //tempOnly
                                                 RemoveCall(deCall);             //may have been queued previously
                                             }
                                             else        //update the call in queue
                                             {
-                                                Console.WriteLine($"     *{deCall} not currently being processed by WSJT-X, update queue");     //tempOnly
+                                                Console.WriteLine($"     *'{deCall}' not currently being processed by WSJT-X, update queue");     //tempOnly
                                                 UpdateCall(deCall, dmsg);
                                             }
                                         }
@@ -418,13 +419,20 @@ namespace WSJTX_Controller
                     {
                         //ack'ing either early or normal logging
                         //WSJT-X's auto-logging is disabled
-                        //Console.WriteLine(msg);
                         QsoLoggedMessage lmsg = (QsoLoggedMessage)msg;
-                        if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
+                        Console.WriteLine(lmsg);         //tempOnly
                         qCall = lmsg.DxCall;
-                        logList.Add(qCall);    //even if already logged this mode/band
-                        ShowLogged();
-                        Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
+                        if (qCall == null)
+                        {
+                            Console.WriteLine($"{Time()} QSO logging ack ERROR: qCall is null");
+                        }
+                        else
+                        {
+                            if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
+                            logList.Add(qCall);    //even if already logged this mode/band
+                            ShowLogged();
+                            Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
+                        }
                         UpdateDebug();
 
                         //check for call sign in queue/dictionary,
