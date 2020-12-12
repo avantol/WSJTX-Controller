@@ -258,10 +258,18 @@ namespace WSJTX_Controller
             //get minimal info from StatusMessage needed for faster startup
             if (WsjtxMessage.NegoState != WsjtxMessage.NegoStates.RECD && msg.GetType().Name == "StatusMessage")
             {
+                Console.WriteLine($"{Time()} preliminary status msg");
                 StatusMessage smsg = (StatusMessage)msg;
                 mode = smsg.Mode;
                 specOp = (int)smsg.SpecialOperationMode;
                 Console.WriteLine($"{Time()} Status    mode: {mode} specOp:{specOp}");
+                myCall = smsg.DeCall;
+                myGrid = smsg.DeGrid;
+                if (myGrid.Length > 4)
+                {
+                    myGrid = myGrid.Substring(0, 4);
+                }
+                Console.WriteLine($"{Time()} myCall: {myCall} myGrid: {myGrid}");
             }
 
 
@@ -469,6 +477,17 @@ namespace WSJTX_Controller
                     if (lastTxMsg == null) lastTxMsg = txMsg;   //initialize
                     if (smsg.TRPeriod != null) trPeriod = (int)smsg.TRPeriod;
 
+                    if (myCall == null)
+                    {
+                        myCall = smsg.DeCall;
+                        myGrid = smsg.DeGrid;
+                        if (myGrid.Length > 4)
+                        {
+                            myGrid = myGrid.Substring(0, 4);
+                        }
+                        Console.WriteLine($"{Time()} myCall: {myCall} myGrid: {myGrid}");
+                    }
+
                     //detect xmit start/end ASAP
                     if (trPeriod != null && transmitting != lastXmitting)
                     {
@@ -603,17 +622,6 @@ namespace WSJTX_Controller
                         ClearCalls();
                         Console.WriteLine($"{Time()} Cleared queued calls: TxFirst");
                         lastTxFirst = txFirst;
-                    }
-
-                    if (myCall == null)
-                    {
-                        myCall = smsg.DeCall;
-                        myGrid = smsg.DeGrid;
-                        if (myGrid.Length > 4)
-                        {
-                            myGrid = myGrid.Substring(0, 4);
-                        }
-                        Console.WriteLine($"{Time()} myCall: {myCall} myGrid: {myGrid}");
                     }
 
                     //check for setup for CQ
