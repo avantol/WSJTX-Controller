@@ -194,7 +194,7 @@ namespace WSJTX_Controller
             try
             {
                 msg = WsjtxMessage.Parse(datagram);
-                //Console.WriteLine($"{Time()} msg:{msg.GetType().Name}");            //tempOnly
+                Console.WriteLine($"{Time()} msg:{msg.GetType().Name}");            //tempOnly
             }
             catch (ParseFailureException ex)
             {
