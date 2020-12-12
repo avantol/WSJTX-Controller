@@ -194,7 +194,7 @@ namespace WSJTX_Controller
             try
             {
                 msg = WsjtxMessage.Parse(datagram);
-                Console.WriteLine($"{Time()} msg:{msg.GetType().Name}");            //tempOnly
+                Console.WriteLine($"{Time()} msg:{msg}");            //tempOnly
             }
             catch (ParseFailureException ex)
             {
@@ -620,8 +620,8 @@ namespace WSJTX_Controller
                     if (supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.START)
                     {
                         opMode = OpModes.ACTIVE;
-                        ShowStatus();
                         Console.WriteLine($"{Time()} opMode: ACTIVE");
+                        ShowStatus();
                         ClearAltCallList();
                         //string curStatus = $"Status    qsoState:{qsoState} lastTxMsg: {smsg.LastTxMsg} txEnabled:{txEnabled} txMsg:'{txMsg}' txTimeout:{txTimeout} Transmitting: {transmitting} Mode: {mode}";
                         //Console.WriteLine(curStatus);
