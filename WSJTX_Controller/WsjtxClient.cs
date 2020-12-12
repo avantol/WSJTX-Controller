@@ -1574,10 +1574,10 @@ private bool RemoveCall(string call)
                 ctrl.label8.Text = $"cmd from: {WsjtxMessage.DeCall(replyCmd)}";
                 ctrl.label9.Text = $"dxCall: {dxCall}";
 
-                string txTo = WsjtxMessage.ToCall(txMsg);
+                string txTo = (txMsg ==  null ? "" : WsjtxMessage.ToCall(txMsg));
                 s = (txTo == "CQ" ? null : txTo);
                 ctrl.label12.Text = $"tx to: {s}";
-                string inPr = CallInProgress();
+                string inPr = (CallInProgress() == null ? "" : CallInProgress());
                 s = (inPr == "CQ" ? null : txTo);
                 ctrl.label13.Text = $"in-prog: {s}";
 
