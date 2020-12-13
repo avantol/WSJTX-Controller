@@ -94,6 +94,7 @@ namespace WSJTX_Controller
         private string errorDesc = null;
         private Random rnd = new Random();
         TimeSpan latestDecodeTime;
+        DateTime firstDecodeTime;
 
         private struct UdpState
         {
@@ -168,6 +169,7 @@ namespace WSJTX_Controller
             //amsg = new HaltTxMessage();
             //amsg.Id = WsjtxMessage.UniqueId;
             //amsg.AutoOnly = true;
+            firstDecodeTime = DateTime.MinValue;
 
             UpdateDebug();          //last before starting loop
         }
@@ -507,6 +509,7 @@ namespace WSJTX_Controller
                             StartTimer2();
                             decodedMsgReplied = false;          //decode passes finished
                             processTxStart();
+                            if (firstDecodeTime == DateTime.MinValue) firstDecodeTime = DateTime.Now;       //start counting until WSJT-X watchdog timer set
                         }
                         else                //end of transmit
                         {
@@ -609,12 +612,18 @@ namespace WSJTX_Controller
                             string hStatus = $"Status    qsoState:{qsoState} lastTxMsg: {smsg.LastTxMsg} txEnabled:{txEnabled} tCall:{tCall} TxWatchdog:{smsg.TxWatchdog} Transmitting: {transmitting} Mode: {mode}";
                             Console.WriteLine(hStatus);
                             Play("beepbeep.wav");
-                            /*  done in WSJT-X
-                            //disable xmit
-                            ba = amsg.GetBytes();
-                            udpClient2.Send(ba, ba.Length);
-                            Console.WriteLine($"{Time()} >>>>>Sent 'Halt Tx' cmd:\n{amsg}");
-                            */
+                            if (firstDecodeTime != DateTime.MinValue)
+                            {
+                                if ((DateTime.Now - firstDecodeTime).TotalMinutes < 15)
+                                {
+                                    ModelessDialog("Set the 'Tx watchdog' in WSJT-X to 15 minutes or more.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (ex: Calling CQ, when the band is inactive).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, General tab.");
+                                }
+                                else
+                                {
+                                    ModelessDialog("The 'Tx watchdog' in WSJT-X has timed out.\n\nSelect 'Enable Tx' when ready to continue.\n\n(The WSJT-X 'Tx watchdog' setting is under File | Settings, General tab).");
+                                }
+                                firstDecodeTime = DateTime.MinValue;        //allow timing to restart
+                            }
                         }
                         lastTxWatchdog = smsg.TxWatchdog;
                     }
@@ -1618,5 +1627,19 @@ private bool RemoveCall(string call)
                 Console.WriteLine($"ERROR: UpdateDebug: err:{err}");
             }
         }
-    }
+
+        private void ModelessDialog(string text)
+        {
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  text,
+                  "WSJT-X Controller",
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Warning
+                );
+            })).Start();
+        }
+    }   
 }
