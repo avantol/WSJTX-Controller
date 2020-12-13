@@ -198,7 +198,7 @@ namespace WSJTX_Controller
             try
             {
                 msg = WsjtxMessage.Parse(datagram);
-                Console.WriteLine($"{Time()} msg:{msg}");            //tempOnly
+                //Console.WriteLine($"{Time()} msg:{msg}");            //tempOnly
             }
             catch (ParseFailureException ex)
             {
@@ -314,7 +314,7 @@ namespace WSJTX_Controller
                         rawMode = dmsg.Mode;    //different from mode string in status msg
                         if (dmsg.New)           //important to reject replays requested by other pgms
                         { 
-                            if (dmsg.IsCallTo(myCall)) Console.WriteLine(dmsg);
+                            if (dmsg.IsCallTo(myCall)) Console.WriteLine($"{dmsg}\n     *msg:'{dmsg.Message}'");
 
                             deCall = dmsg.DeCall();
                             //do some processing not directly related to replying immediately
@@ -368,7 +368,7 @@ namespace WSJTX_Controller
                                                 udpClient2.Send(ba, ba.Length);
                                                 replyCmd = dmsg.Message;        //save the last reply cmd to determine which call is in progress
                                                 replyDecode = dmsg;             //save the decode the reply cmd came from
-                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg', txTimeout:{txTimeout} cmd:\n{rmsg}\nreplyToReq:'{replyCmd}'");
+                                                Console.WriteLine($"{Time()} >>>>>Sent 'Reply To Msg', txTimeout:{txTimeout} cmd:\n{rmsg}\nreplyCmd:'{replyCmd}'");
                                                 decodedMsgReplied = true;       //no more replies during rest of pass(es) in current decoding phases
                                            }
                                             else   //not CALLING or a decode already replied to this cycle
@@ -754,10 +754,11 @@ namespace WSJTX_Controller
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
-            Console.WriteLine($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+            Console.WriteLine($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}' replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
             //check for WSJT-X ready to respond to a 73/RR73 that is not from the last Tx 'to'
-            // msg to be sent is 73               msg to be sent 'to'      is not  replyCmd "from' (i.e.: WSJT-X ignored last reply cmd)
-            if (WsjtxMessage.Is73orRR73(txMsg) && replyCmd != null && WsjtxMessage.ToCall(txMsg) != WsjtxMessage.DeCall(replyCmd))
+            // msg to be sent is 73               msg to be sent 'to'      is not  replyCmd 'from' (i.e.: WSJT-X ignored last reply cmd)
+            if (WsjtxMessage.Is73orRR73(txMsg) && replyCmd != null && WsjtxMessage.ToCall(txMsg) != null 
+                && WsjtxMessage.DeCall(replyCmd) != null && WsjtxMessage.ToCall(txMsg) != WsjtxMessage.DeCall(replyCmd))
             {
                 //log the unexpected call sign
                 LogQso(WsjtxMessage.ToCall(txMsg));

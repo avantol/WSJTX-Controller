@@ -117,7 +117,7 @@ namespace WsjtxUdpLib.Messages.Out
         /// True when the decode is off-air, false when the decode is from a replay requested from a third-party pplication
         /// </summary>
 
-        private string[] messageWords;
+        //private string[] messageWords;
         public bool New { get; set; }
         public TimeSpan SinceMidnight { get; set; }
         public int Snr { get; set; }
@@ -137,25 +137,19 @@ namespace WsjtxUdpLib.Messages.Out
 
         public bool IsCallTo(string myCall)
         {
-            return myCall != null && messageWords.Length > 0 && messageWords[0].Contains(myCall);
+            return myCall != null && myCall == WsjtxMessage.ToCall(Message);
         }
         public bool Is73()
         {
-            return Message.Contains("73");
+            return WsjtxMessage.Is73(Message);
         }
         public bool IsCQ()
         {
-            return messageWords.Length > 1 && messageWords[0].Contains("CQ");
+            return WsjtxMessage.IsCQ(Message);
         }
         public string DeCall()
         {
-            string s = WsjtxMessage.DeCall(Message);
-            if (s == null) return "";
-            return s;
-        }
-        public string Call()
-        {
-            return messageWords.Length > 0 ? messageWords[0] : "";
+            return WsjtxMessage.DeCall(Message);
         }
 
         public override string ToString()
@@ -200,10 +194,21 @@ namespace WsjtxUdpLib.Messages.Out
             decodeMessage.DeltaFrequency = DecodeQInt32(message, ref cur);
             decodeMessage.Mode = DecodeString(message, ref cur);
             decodeMessage.Message = DecodeString(message, ref cur);
+
+            //this actually happens, somehow
+            //'W1AW K1HZ FN42                      ? a2'
+            //01234567890123456789012345678901234567890
+            //          1         2         3         4
+            int idx = decodeMessage.Message.IndexOf("        ");
+            if (idx != -1)
+            {
+                decodeMessage.Message = decodeMessage.Message.Substring(0, idx);
+            }
+
             decodeMessage.LowConfidence = DecodeBool(message, ref cur);
             decodeMessage.OffAir = DecodeBool(message, ref cur);
 
-            decodeMessage.messageWords = decodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            //decodeMessage.messageWords = decodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
             return decodeMessage;
         }

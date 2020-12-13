@@ -71,7 +71,7 @@ namespace WsjtxUdpLib.Messages.Out
             return s;
         }
 
-        //there are grid codes that *contain* "73", so test for *exactly* "73";
+        //there are grid codes that *contain* "73", so test for *exactly* "73" or "RR73";
         //msgs in the form "W1AW K1JT 73" or "W1AW K1JT RR73";
         //custom 73 msgs are not acceptable
         public static bool Is73orRR73(string msg)
@@ -80,6 +80,17 @@ namespace WsjtxUdpLib.Messages.Out
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             return (words[2] == "73" || words[2] == "RR73");
+        }
+
+        //there are grid codes that *contain* "73", so test for *exactly* "73";
+        //msgs in the form "W1AW K1JT 73";
+        //custom 73 msgs are not acceptable
+        public static bool Is73(string msg)
+        {
+            if (msg == null) return false;
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Count() != 3) return false;
+            return (words[2] == "73");
         }
 
         public static bool IsCQ(string msg)
@@ -131,7 +142,6 @@ namespace WsjtxUdpLib.Messages.Out
             if (int.TryParse(words[2].Substring(1, 1), out i)) return false;
             return true;
         }
-
 
         public static string DirectedTo(string msg)
         {
