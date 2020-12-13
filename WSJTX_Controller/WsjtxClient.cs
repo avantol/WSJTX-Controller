@@ -14,6 +14,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Forms;
 
 namespace WSJTX_Controller
 {
@@ -173,6 +174,8 @@ namespace WSJTX_Controller
 
         public void UdpLoop()
         {
+            if (udpClient == null) return;
+
             //timer expires at 11-12 msec minimum (due to OS limitations)
             if (messageRecd)
             {
@@ -183,6 +186,7 @@ namespace WSJTX_Controller
             // Receive a UDP datagram
             if (!recvStarted)
             {
+                if (udpClient == null) return;
                 udpClient.BeginReceive(asyncCallback, s);
                 recvStarted = true;
             }
@@ -212,12 +216,11 @@ namespace WSJTX_Controller
                 HeartbeatMessage imsg = (HeartbeatMessage)msg;
                 if (!acceptableWsjtxVersions.Contains(imsg.Version) || imsg.Version == "2.2.2" && imsg.Revision == "0d9b96")
                 {
-                    WsjtxMessage.NegoState = WsjtxMessage.NegoStates.FAIL;
-                    Console.WriteLine($"{Time()} NegoState: FAIL");
                     Console.Beep();
-                    failReason = $"WSJT-X v{imsg.Version} {imsg.Revision} not supported";
-                    Console.WriteLine($"{Time()} {failReason}");
-                    ShowStatus();
+                    ctrl.CloseComm();
+                    MessageBox.Show($"WSJT-X v{imsg.Version} {imsg.Revision} not supported", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ctrl.Close();
+                    return;
                 }
                 else
                 {
@@ -263,15 +266,15 @@ namespace WSJTX_Controller
                 mode = smsg.Mode;
                 specOp = (int)smsg.SpecialOperationMode;
                 Console.WriteLine($"{Time()} Status    mode: {mode} specOp:{specOp}");
-                myCall = smsg.DeCall;
-                myGrid = smsg.DeGrid;
-                if (myGrid.Length > 4)
+                if (smsg.DeCall == null || smsg.DeGrid == null)
                 {
-                    myGrid = myGrid.Substring(0, 4);
+                    Console.Beep();
+                    ctrl.CloseComm();
+                    MessageBox.Show ("Call sign and Grid not entered in WSJT-X", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ctrl.Close();
+                    return;
                 }
-                Console.WriteLine($"{Time()} myCall: {myCall} myGrid: {myGrid}");
             }
-
 
             //************
             //CloseMessage
@@ -481,6 +484,14 @@ namespace WSJTX_Controller
                     {
                         myCall = smsg.DeCall;
                         myGrid = smsg.DeGrid;
+                        if (smsg.DeCall == null || smsg.DeGrid == null)
+                        {
+                            Console.Beep();
+                            ctrl.CloseComm();
+                            MessageBox.Show("Call sign and Grid not entered in WSJT-X", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            ctrl.Close();
+                            return;
+                        }
                         if (myGrid.Length > 4)
                         {
                             myGrid = myGrid.Substring(0, 4);
@@ -1128,6 +1139,7 @@ private bool RemoveCall(string call)
             {
                 Console.WriteLine($"{Time()} Error at Closing, udpClient:{udpClient} udpClient2:{udpClient2}");
             }
+            udpClient = null;
         }
         public void Dispose()
         {

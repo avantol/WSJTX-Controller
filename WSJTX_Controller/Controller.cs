@@ -129,7 +129,13 @@ namespace WSJTX_Controller
             Properties.Settings.Default.skipGrid = skipGridCheckBox.Checked;
 
             Properties.Settings.Default.Save();
-            //timer1.Stop();
+            CloseComm();
+        }
+
+        public void CloseComm()
+        {
+            if (timer1 != null) timer1.Stop();
+            timer1 = null;
             wsjtxClient.Closing();
         }
 
@@ -144,6 +150,7 @@ namespace WSJTX_Controller
 
         private void timer1_Tick(object sender, EventArgs e)
         {
+            if (timer1 == null) return;
             wsjtxClient.UdpLoop();
         }
 
