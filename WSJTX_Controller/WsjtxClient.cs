@@ -382,9 +382,9 @@ namespace WSJTX_Controller
                                 // not xmitting yet    
                                 if (/*!transmitting*/ true)      //todo: can process decodes after Tx starts?
                                 {
-                                    if (!dmsg.Is73())       //not a 73 or RR73
+                                    if (!dmsg.Is73orRR73())       //not a 73 or RR73
                                     {
-                                        Console.WriteLine($"     *Not a 73");  //tempOnly
+                                        Console.WriteLine($"     *Not a 73 or RR73");  //tempOnly
                                         if (!callQueue.Contains(deCall))        //call not in queue, possibly enqueue the call data
                                         {
                                             Console.WriteLine($"     *'{deCall}' not already in queue");  //tempOnly
@@ -441,9 +441,9 @@ namespace WSJTX_Controller
                                             }
                                         }
                                     }
-                                    else        //decode is 73 msg
+                                    else        //decode is 73 or RR73 msg
                                     {
-                                        Console.WriteLine($"     *decode is 73 msg, tCall:{tCall}, cur Tx to:'{WsjtxMessage.DeCall(txMsg)}' cur Tx IsRogers:{WsjtxMessage.IsRogers(txMsg)}");     //tempOnly
+                                        Console.WriteLine($"     *decode is 73 or RR73 msg, tCall:{tCall}, cur Tx to:'{WsjtxMessage.DeCall(txMsg)}' cur Tx IsRogers:{WsjtxMessage.IsRogers(txMsg)}");     //tempOnly
                                         /* to-do: need to set up WSJT-X with valid QSO data first
                                         //check for last-chance logging (73 after current QSO just ended)
                                         //  was not logged early at RRR sent  same call timed out  prev Tx msg was to myCall           prev Tx msg was a RRR

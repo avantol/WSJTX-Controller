@@ -139,14 +139,22 @@ namespace WsjtxUdpLib.Messages.Out
         {
             return myCall != null && myCall == WsjtxMessage.ToCall(Message);
         }
+
         public bool Is73()
         {
             return WsjtxMessage.Is73(Message);
         }
+
+        public bool Is73orRR73()
+        {
+            return WsjtxMessage.Is73orRR73(Message);
+        }
+
         public bool IsCQ()
         {
             return WsjtxMessage.IsCQ(Message);
         }
+
         public string DeCall()
         {
             return WsjtxMessage.DeCall(Message);
