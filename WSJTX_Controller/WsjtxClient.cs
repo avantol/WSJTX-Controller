@@ -31,6 +31,7 @@ namespace WSJTX_Controller
         public bool debug;
         public bool advanced;
 
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/208" };
         private string myCall = null, myGrid = null;
         private Dictionary<string, DecodeMessage> callDict = new Dictionary<string, DecodeMessage>();
         private Queue<string> callQueue = new Queue<string>();
@@ -83,7 +84,6 @@ namespace WSJTX_Controller
         private static byte[] datagram;
         private static IPEndPoint fromEp = new IPEndPoint(IPAddress.Any, 0);
         private static bool recvStarted;
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2" };
         private string failReason = "Failure reason: Unknown";
 
         private const int maxQueueLines = 6, maxQueueWidth = 19, maxLogWidth = 9;
@@ -108,7 +108,7 @@ namespace WSJTX_Controller
             START,
             ACTIVE
         }
-        private OpModes opMode = OpModes.READY;
+        private OpModes opMode;
 
         public WsjtxClient(Controller c, IPAddress reqIpAddress, int reqPort, bool reqMulticast, bool reqDebug)
         {
@@ -123,6 +123,8 @@ namespace WSJTX_Controller
             string fileVer = $"{v.Major}.{v.Minor}.{v.Build}";
             WsjtxMessage.PgmVersion = fileVer;
             debug = reqDebug;
+            opMode = OpModes.READY;
+            WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
 
             if (multicast)
             {
@@ -141,9 +143,8 @@ namespace WSJTX_Controller
             s.e = endPoint;
             s.u = udpClient;
 
-            WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
-            Console.WriteLine($"{Time()} NegoState: INITIAL");
-            Console.WriteLine($"{Time()} opMode: READY");
+            Console.WriteLine($"{Time()} NegoState:{WsjtxMessage.NegoState}");
+            Console.WriteLine($"{Time()} opMode:{opMode}");
             Console.WriteLine($"{Time()} Waiting for heartbeat...");
 
             ShowStatus();
@@ -214,13 +215,15 @@ namespace WSJTX_Controller
             //first HeartbeatMessage
             if (msg.GetType().Name == "HeartbeatMessage" && (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.INITIAL || WsjtxMessage.NegoState == WsjtxMessage.NegoStates.FAIL))
             {
+                ctrl.timer4.Stop();
                 Console.WriteLine(msg);
                 HeartbeatMessage imsg = (HeartbeatMessage)msg;
-                if (!acceptableWsjtxVersions.Contains(imsg.Version) || imsg.Version == "2.2.2" && imsg.Revision == "0d9b96")
+                string curVerBld = $"{imsg.Version}/{imsg.Revision}";
+                if (!acceptableWsjtxVersions.Contains(curVerBld))
                 {
                     Console.Beep();
                     ctrl.CloseComm();
-                    MessageBox.Show($"WSJT-X v{imsg.Version} {imsg.Revision} not supported", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show($"WSJT-X v{imsg.Version} {imsg.Revision} not supported", "WSJT-X Controller", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     ctrl.Close();
                     return;
                 }
@@ -239,9 +242,26 @@ namespace WSJTX_Controller
                     udpClient2.Connect(fromEp);
                     udpClient2.Send(ba, ba.Length);
                     WsjtxMessage.NegoState = WsjtxMessage.NegoStates.SENT;
-                    Console.WriteLine($"{Time()} NegoState: SENT");
+                    Console.WriteLine($"{Time()} NegoState:{WsjtxMessage.NegoState}");
                     Console.WriteLine($"{Time()} >>>>>Sent'Heartbeat' msg:\n{tmsg}");
                     ShowStatus();
+
+                    //send ACK request to WSJT-X
+                    Thread.Sleep(250);
+                    emsg.NewTxMsgIdx = 7;
+                    emsg.GenMsg = $"";      //no effect
+                    emsg.SkipGrid = false;      //no effect
+                    emsg.UseRR73 = false;      //no effect
+                    ba = emsg.GetBytes();
+                    udpClient2.Send(ba, ba.Length);
+                    Console.WriteLine($"{Time()} >>>>>Sent 'Ack Req(1)' cmd:7\n{emsg}");
+                    Thread.Sleep(250);
+                    udpClient2.Send(ba, ba.Length);
+                    Console.WriteLine($"{Time()} >>>>>Sent 'Ack Req(1)' cmd:7\n{emsg}");
+                    ctrl.timer4.Interval = 1500;         //first time: need a status reply
+                    ctrl.timer4.Start();
+                    Console.WriteLine($"     =timer4 started");
+                    Console.WriteLine($"{Time()} Waiting for heartbeat...");
                 }
                 UpdateDebug();
                 return;
@@ -251,31 +271,67 @@ namespace WSJTX_Controller
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.SENT && msg.GetType().Name == "HeartbeatMessage")
             {
                 Console.WriteLine(msg);
-                Console.WriteLine($"{Time()} NegoState: RECD");
 
                 HeartbeatMessage hmsg = (HeartbeatMessage)msg;
                 WsjtxMessage.NegotiatedSchemaVersion = hmsg.SchemaVersion;
                 WsjtxMessage.NegoState = WsjtxMessage.NegoStates.RECD;
+                Console.WriteLine($"{Time()} NegoState:{WsjtxMessage.NegoState}");
                 Console.WriteLine($"{Time()} Negotiated schema version:{WsjtxMessage.NegotiatedSchemaVersion}");
                 UpdateDebug();
+
+                //send ACK request to WSJT-X, this time only to get 
+                //a StatusMessage reply to start normal operation
+                Thread.Sleep(250);
+                emsg.NewTxMsgIdx = 7;
+                emsg.GenMsg = $"";      //no effect
+                emsg.SkipGrid = false;      //no effect
+                emsg.UseRR73 = false;      //no effect
+                ba = emsg.GetBytes();
+                udpClient2.Send(ba, ba.Length);
+                Console.WriteLine($"{Time()} >>>>>Sent 'Ack Req(2)' cmd:7\n{emsg}");
+                Thread.Sleep(250);
+                udpClient2.Send(ba, ba.Length);
+                Console.WriteLine($"{Time()} >>>>>Sent 'Ack Req(2)' cmd:7\n{emsg}");
             }
 
             //get minimal info from StatusMessage needed for faster startup
-            if (WsjtxMessage.NegoState != WsjtxMessage.NegoStates.RECD && msg.GetType().Name == "StatusMessage")
+            //and for special case of ack msg returned by WSJT-X after ack req
+            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.SENT && msg.GetType().Name == "StatusMessage")
             {
-                Console.WriteLine($"{Time()} preliminary status msg");
                 StatusMessage smsg = (StatusMessage)msg;
                 mode = smsg.Mode;
                 specOp = (int)smsg.SpecialOperationMode;
-                Console.WriteLine($"{Time()} Status    mode: {mode} specOp:{specOp}");
+                Console.WriteLine($"{Time()} Status    mode:{mode} specOp:{specOp}");
                 if (smsg.DeCall == null || smsg.DeGrid == null)
                 {
                     Console.Beep();
                     ctrl.CloseComm();
-                    MessageBox.Show ("Call sign and Grid not entered in WSJT-X", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Call sign and Grid not entered in WSJT-X", "WSJT-X Controller", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     ctrl.Close();
                     return;
                 }
+
+                if (myCall == null)
+                {
+                    myCall = smsg.DeCall;
+                    myGrid = smsg.DeGrid;
+                    if (myGrid.Length > 4)
+                    {
+                        myGrid = myGrid.Substring(0, 4);
+                    }
+                    Console.WriteLine($"     =myCall:{myCall} myGrid:{myGrid}");
+                }
+
+                if (ctrl.timer4.Enabled)            //looking for ack msg
+                {
+                    if (smsg.LastTxMsg == "EXT_CTRL")
+                    {
+                        ctrl.timer4.Stop();            //no need for connection help dialog
+                        Console.WriteLine($"{Time()} Status: ack rec'd, timer4 stopped");
+                    }
+                    return;
+                }
+                return;
             }
 
             //************
@@ -290,7 +346,7 @@ namespace WSJTX_Controller
                 ResetOpMode();     //wait for (new) WSJT-X mode
                 //Console.WriteLine(msg);
                 Console.WriteLine($"");
-                Console.WriteLine($"{Time()} opMode: READY (close)");
+                Console.WriteLine($"{Time()} opMode:{opMode} NegoState:{WsjtxMessage.NegoState}(close)");
                 Console.WriteLine($"{Time()} Waiting for heartbeat...");
                 UpdateDebug();
                 return;
@@ -441,7 +497,7 @@ namespace WSJTX_Controller
                         if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
                         logList.Add(qCall);    //even if already logged this mode/band
                         ShowLogged();
-                        Console.WriteLine($"{Time()} QSO logging ackd: {qCall}");
+                        Console.WriteLine($"{Time()} QSO logging ackd: qCall{qCall}");
                         UpdateDebug();
 
                         //check for call sign in queue/dictionary,
@@ -457,6 +513,7 @@ namespace WSJTX_Controller
                 //*************
                 if (msg.GetType().Name == "StatusMessage")
                 {
+                    //Console.WriteLine($"{Time()} Status");                        
                     StatusMessage smsg = (StatusMessage)msg;
                     qsoState = smsg.CurQsoState();
                     txEnabled = smsg.TxEnabled;
@@ -482,25 +539,6 @@ namespace WSJTX_Controller
                     if (lastTxMsg == null) lastTxMsg = txMsg;   //initialize
                     if (smsg.TRPeriod != null) trPeriod = (int)smsg.TRPeriod;
 
-                    if (myCall == null)
-                    {
-                        myCall = smsg.DeCall;
-                        myGrid = smsg.DeGrid;
-                        if (smsg.DeCall == null || smsg.DeGrid == null)
-                        {
-                            Console.Beep();
-                            ctrl.CloseComm();
-                            MessageBox.Show("Call sign and Grid not entered in WSJT-X", "", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            ctrl.Close();
-                            return;
-                        }
-                        if (myGrid.Length > 4)
-                        {
-                            myGrid = myGrid.Substring(0, 4);
-                        }
-                        Console.WriteLine($"{Time()} myCall: {myCall} myGrid: {myGrid}");
-                    }
-
                     //detect xmit start/end ASAP
                     if (trPeriod != null && transmitting != lastXmitting)
                     {
@@ -520,7 +558,7 @@ namespace WSJTX_Controller
                     }
 
                     //minimize console clutter
-                    string curStatus = $"Status    qsoState:{qsoState} txMsg:'{txMsg}' replyCmd:'{replyCmd}' \n          txTimeout:{txTimeout} Transmitting: {transmitting} Mode: {mode} txEnabled:{txEnabled}\n          txFirst:{txFirst} dxCall:{dxCall} trPeriod: {trPeriod}";
+                    string curStatus = $"Status    qsoState:{qsoState} txMsg:'{txMsg}' replyCmd:'{replyCmd}' \n          txTimeout:{txTimeout} Transmitting:{transmitting} Mode:{mode} txEnabled:{txEnabled}\n          txFirst:{txFirst} dxCall:{dxCall} trPeriod:{trPeriod}";
                     if (curStatus != lastStatus)
                     {
                         Console.WriteLine(curStatus);
@@ -530,20 +568,20 @@ namespace WSJTX_Controller
                     //detect WSJT-X mode change
                     if (mode != lastMode)
                     {
-                        Console.WriteLine($"{Time()} mode: {mode} (was {lastMode})");
+                        Console.WriteLine($"{Time()} mode:{mode} (was {lastMode})");
 
                         ResetOpMode();
-                        Console.WriteLine($"{Time()} opMode: READY, waiting for mode status...");
+                        Console.WriteLine($"{Time()} opMode:{opMode}, waiting for mode status...");
                         lastMode = mode;
                     }
 
                     //detect WSJT-X special operating mode change
                     if (specOp != lastSpecOp)
                     {
-                        Console.WriteLine($"{Time()} specOp: {specOp} (was {lastSpecOp})");
+                        Console.WriteLine($"{Time()} specOp:{specOp} (was {lastSpecOp})");
 
                         ResetOpMode();
-                        Console.WriteLine($"{Time()} opMode: READY, waiting for mode status...");
+                        Console.WriteLine($"{Time()} opMode:{opMode}, waiting for mode status...");
                         lastSpecOp = specOp;
                     }
 
@@ -553,7 +591,7 @@ namespace WSJTX_Controller
                         opMode = OpModes.START;
                         ShowStatus();
                         ClearAltCallList();
-                        Console.WriteLine($"{Time()} opMode: START");
+                        Console.WriteLine($"{Time()} opMode:{opMode}");
                     }
 
                     //detect decoding start/end
@@ -573,14 +611,14 @@ namespace WSJTX_Controller
                     //check for changed QSO state in WSJT-X
                     if (lastQsoState != qsoState)
                     {
-                        Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState})");
+                        Console.WriteLine($"{Time()} qsoState:{qsoState} (was {lastQsoState})");
                         lastQsoState = qsoState;
                     }
 
                     //check for changed Tx enabled
                     if (lastTxEnabled != txEnabled)
                     {
-                        Console.WriteLine($"{Time()} txEnabled: {txEnabled} (was {lastTxEnabled})");
+                        Console.WriteLine($"{Time()} txEnabled:{txEnabled} (was {lastTxEnabled})");
                         if (!txEnabled) ctrl.timer2.Stop();       //no xmit cycle now
                         if (txEnabled && altCallList.Count > 0 /*&& WsjtxMessage.IsCQ(txMsg)*/ && qsoState == WsjtxMessage.QsoStates.CALLING)
                         {
@@ -609,18 +647,17 @@ namespace WSJTX_Controller
                     {
                         if (smsg.TxWatchdog && opMode == OpModes.ACTIVE)        //only need this event if in valid mode
                         {
-                            string hStatus = $"Status    qsoState:{qsoState} lastTxMsg: {smsg.LastTxMsg} txEnabled:{txEnabled} tCall:{tCall} TxWatchdog:{smsg.TxWatchdog} Transmitting: {transmitting} Mode: {mode}";
+                            string hStatus = $"Status    qsoState:{qsoState} lastTxMsg:{smsg.LastTxMsg} txEnabled:{txEnabled} tCall:{tCall} TxWatchdog:{smsg.TxWatchdog} Transmitting:{transmitting} Mode:{mode}";
                             Console.WriteLine(hStatus);
-                            Play("beepbeep.wav");
                             if (firstDecodeTime != DateTime.MinValue)
                             {
                                 if ((DateTime.Now - firstDecodeTime).TotalMinutes < 15)
                                 {
-                                    ModelessDialog("Set the 'Tx watchdog' in WSJT-X to 15 minutes or more.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (ex: Calling CQ, when the band is inactive).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, General tab.");
+                                    ModelessDialog("Set the 'Tx watchdog' in WSJT-X to 15 minutes or more.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (ex: Calling CQ, when the band is inactive).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, in the 'General' tab.");
                                 }
                                 else
                                 {
-                                    ModelessDialog("The 'Tx watchdog' in WSJT-X has timed out.\n\nSelect 'Enable Tx' when ready to continue.\n\n(The WSJT-X 'Tx watchdog' setting is under File | Settings, General tab).");
+                                    ModelessDialog("The 'Tx watchdog' in WSJT-X has timed out.\n\nSelect 'Enable Tx' when ready to continue.\n\n(The WSJT-X 'Tx watchdog' setting is under File | Settings, in the 'General' tab).");
                                 }
                                 firstDecodeTime = DateTime.MinValue;        //allow timing to restart
                             }
@@ -632,7 +669,7 @@ namespace WSJTX_Controller
                     {
                         ClearCalls();
                         logList.Clear();            //can re-log on new band
-                        Console.WriteLine($"{Time()} Cleared queued calls: DialFrequency");
+                        Console.WriteLine($"{Time()} Cleared queued calls:DialFrequency");
                         lastDialFrequency = smsg.DialFrequency;
                     }
 
@@ -640,7 +677,7 @@ namespace WSJTX_Controller
                     if (txFirst != lastTxFirst)
                     {
                         ClearCalls();
-                        Console.WriteLine($"{Time()} Cleared queued calls: TxFirst");
+                        Console.WriteLine($"{Time()} Cleared queued calls: txFirst:{txFirst}");
                         lastTxFirst = txFirst;
                     }
 
@@ -648,10 +685,10 @@ namespace WSJTX_Controller
                     if (supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.START)
                     {
                         opMode = OpModes.ACTIVE;
-                        Console.WriteLine($"{Time()} opMode: ACTIVE");
+                        Console.WriteLine($"{Time()} opMode:{opMode}");
                         ShowStatus();
                         ClearAltCallList();
-                        //string curStatus = $"Status    qsoState:{qsoState} lastTxMsg: {smsg.LastTxMsg} txEnabled:{txEnabled} txMsg:'{txMsg}' txTimeout:{txTimeout} Transmitting: {transmitting} Mode: {mode}";
+                        //string curStatus = $"Status    qsoState:{qsoState} lastTxMsg:{smsg.LastTxMsg} txEnabled:{txEnabled} txMsg:'{txMsg}' txTimeout:{txTimeout} transmitting:{transmitting} mode:{mode}";
                         //Console.WriteLine(curStatus);
                         //setup for CQ
                         emsg.NewTxMsgIdx = 6;
@@ -660,9 +697,9 @@ namespace WSJTX_Controller
                         emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
                         ba = emsg.GetBytes();           //re-enable Tx for CQ
                         udpClient2.Send(ba, ba.Length);
-                        Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:\n{emsg}");
+                        Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:6\n{emsg}");
                         qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
-                        Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState})");
+                        Console.WriteLine($"{Time()} qsoState:{qsoState} (was {lastQsoState})");
                         lastQsoState = qsoState;
                     }
                     UpdateDebug();
@@ -732,11 +769,11 @@ namespace WSJTX_Controller
                     emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
                     ba = emsg.GetBytes();           //set up for CQ, auto, call 1st
                     udpClient2.Send(ba, ba.Length);
-                    Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:\n{emsg}");
+                    Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:6\n{emsg}");
                     qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
                     replyCmd = null;        //invalidate last reply cmd since not replying
                     replyDecode = null;
-                    Console.WriteLine($"{Time()} qsoState: {qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
+                    Console.WriteLine($"{Time()} qsoState:{qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
                     lastQsoState = qsoState;
                 }
                 txTimeout = false;              //ready for next timeout
@@ -749,7 +786,7 @@ namespace WSJTX_Controller
 
         public void processDecodes()
         {
-            Console.WriteLine($"\n{Time()} Timer2 tick: txEnabled: {txEnabled} txTimeout:{txTimeout}");
+            Console.WriteLine($"\n{Time()} Timer2 tick: txEnabled:{txEnabled} txTimeout:{txTimeout}");
             if (ctrl == null) Console.WriteLine($"ERROR: ctrl is null");            //tempOnly
             if (ctrl.timer2 == null) Console.WriteLine($"ERROR: timer2 is null");   //tempOnly
             ctrl.timer2.Stop();
@@ -810,7 +847,7 @@ namespace WSJTX_Controller
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
-            Console.WriteLine($"\n{Time()} Tx end: xmitCycleCount: {xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall: {tCall}\n          toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
+            Console.WriteLine($"\n{Time()} Tx end: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall: {tCall}\n          toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
 
             //check for WSJT-X processing a call other than last cmd
             string deCall = WsjtxMessage.DeCall(replyCmd);
@@ -837,7 +874,7 @@ namespace WSJTX_Controller
             {
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
-                Console.WriteLine($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount: {xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}");
+                Console.WriteLine($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}");
                 //NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
                 if (!qsoLogged)
                 {
@@ -858,27 +895,27 @@ namespace WSJTX_Controller
                 }
                 lastTxMsg = txMsg;
                 xmitCycleCount = 0;
-                Console.WriteLine($"{Time()} Reset(1) (different msg) xmitCycleCount: {xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
+                Console.WriteLine($"{Time()} Reset(1) (different msg) xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
             }
             else        //same "to" call as last xmit, count xmit cycles
             {
                 if (toCall != "CQ")        //don't count CQ (or non-std) calls
                 {
                     xmitCycleCount++;           //count xmits to same call sign at end of xmit cycle
-                    Console.WriteLine($"{Time()} (same msg) xmitCycleCount: {xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
+                    Console.WriteLine($"{Time()} (same msg) xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
                     if (xmitCycleCount >= (int)ctrl.timeoutNumUpDown.Value - 1)  //n msgs = n-1 diffs
                     {
                         xmitCycleCount = 0;
                         txTimeout = true;
                         tCall = WsjtxMessage.ToCall(lastTxMsg);        //will be null if non-std msg
-                        Console.WriteLine($"{Time()} Reset(3) (timeout) xmitCycleCount: {xmitCycleCount} txTimeout:{txTimeout} tCall:{tCall}");
+                        Console.WriteLine($"{Time()} Reset(3) (timeout) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} tCall:{tCall}");
                     }
                 }
                 else
                 {
                     //same CQ or non-std call
                     xmitCycleCount = 0;
-                    Console.WriteLine($"{Time()} Reset(4) (no action, CQ or non-std) xmitCycleCount: {xmitCycleCount}");
+                    Console.WriteLine($"{Time()} Reset(4) (no action, CQ or non-std) xmitCycleCount:{xmitCycleCount}");
                 }
             }
             
@@ -887,10 +924,10 @@ namespace WSJTX_Controller
             {
                 xmitCycleCount = 0;
                 txTimeout = true;
-                Console.WriteLine($"{Time()} Reset(5) (new directed CQ) xmitCycleCount: {xmitCycleCount}");
+                Console.WriteLine($"{Time()} Reset(5) (new directed CQ) xmitCycleCount:{xmitCycleCount}");
             }
 
-            Console.WriteLine($"{Time()} Tx end done: xmitCycleCount: {xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall: {tCall} qsoLogged:{qsoLogged}\n");
+            Console.WriteLine($"{Time()} Tx end done: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall:{tCall} qsoLogged:{qsoLogged}\n");
             ShowTimeout();
         }
 
@@ -902,7 +939,7 @@ namespace WSJTX_Controller
             emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
             ba = emsg.GetBytes();
             udpClient2.Send(ba, ba.Length);
-            Console.WriteLine($"{Time()} >>>>>Sent 'Setup logging' cmd:\n{emsg}");
+            Console.WriteLine($"{Time()} >>>>>Sent 'Log Req' cmd:5\n{emsg}");
         }
 
         private string CallInProgress()
@@ -969,10 +1006,10 @@ namespace WSJTX_Controller
                 callDict.Remove(call);
                 callDict.Add(deCall, msg);
                 ShowQueue();
-                Console.WriteLine($"{Time()} Updated {deCall}: {callQueueString()} {callDictString()}");
+                Console.WriteLine($"{Time()} Updated {deCall}:{callQueueString()} {callDictString()}");
                 return true;
             }
-            Console.WriteLine($"{Time()} Not updated {deCall}: {callQueueString()} {callDictString()}");
+            Console.WriteLine($"{Time()} Not updated {deCall}:{callQueueString()} {callDictString()}");
             return false;
         }
 
@@ -1139,7 +1176,7 @@ private bool RemoveCall(string call)
                     emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
                     ba = emsg.GetBytes();
                     udpClient2.Send(ba, ba.Length);
-                    Console.WriteLine($"{Time()} >>>>>Sent 'Setup de-init' cmd:\n{emsg}");
+                    Console.WriteLine($"{Time()} >>>>>Sent 'De-init Req' cmd:0\n{emsg}");
                     Thread.Sleep(500);
                     udpClient2.Close();
                 }
@@ -1209,7 +1246,7 @@ private bool RemoveCall(string call)
             }
             catch (Exception err)
             {
-                Console.WriteLine($"Error: ReceiveCallback() {err}");
+                Console.WriteLine($"Exception: ReceiveCallback() {err}");
                 return;
             }
 
@@ -1628,8 +1665,29 @@ private bool RemoveCall(string call)
             }
         }
 
+        public void ConnectionDialog()
+        {
+            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.INITIAL)
+            {
+                ModelessDialog($"No response from WSJT-X.\n\nIs WSJT-X running?\nIs the WSJT-X 'UDP Server' set to {ipAddress}?\nIs the WSJT-X 'UDP Server port number' set to {port}?\nIs the WSJT-X 'Accept UDP requests' selection enabled?\n\nSelect 'File | Settings', in the 'Reporting' tab to view these settings.");
+                return;
+            }
+            else if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.SENT)
+            {
+                ctrl.CloseComm();
+                MessageBox.Show($"Connection with WSJT-X not completed.\n\nIs the WSJT-X 'Accept UDP requests' selection enabled?\n\nSelect 'File | Settings', in the 'Reporting' tab to view these settings.", "WSJT-X Controller", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ctrl.Close();
+                return;
+            }
+            else
+            {
+                return;             //undefined state
+            }
+        }
+
         private void ModelessDialog(string text)
         {
+            //Play("beepbeep.wav");
             new Thread(new ThreadStart(delegate
             {
                 MessageBox.Show

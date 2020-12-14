@@ -22,6 +22,7 @@ namespace WSJTX_Controller
         private System.Windows.Forms.Timer timer1;
         public System.Windows.Forms.Timer timer2;
         public System.Windows.Forms.Timer timer3;
+        public System.Windows.Forms.Timer timer4;
 
         public Controller()
         {
@@ -32,6 +33,8 @@ namespace WSJTX_Controller
             timer2.Tick += new System.EventHandler(timer2_Tick);
             timer3 = new System.Windows.Forms.Timer();
             timer3.Tick += new System.EventHandler(timer3_Tick);
+            timer4 = new System.Windows.Forms.Timer();
+            timer4.Tick += new System.EventHandler(timer4_Tick);
         }
 
         [DllImport("Kernel32.dll")]
@@ -79,7 +82,7 @@ namespace WSJTX_Controller
             loggedCheckBox.Checked = Properties.Settings.Default.playLogged;
             alertCheckBox.Checked = Properties.Settings.Default.useAlertDirected;
             logEarlyCheckBox.Checked = Properties.Settings.Default.logEarly;
-            wsjtxClient.debug = Properties.Settings.Default.debug;
+            //wsjtxClient.debug = Properties.Settings.Default.debug;
             wsjtxClient.advanced = Properties.Settings.Default.advanced;
             useRR73CheckBox.Checked = Properties.Settings.Default.useRR73;
             skipGridCheckBox.Checked = Properties.Settings.Default.skipGrid;
@@ -103,6 +106,8 @@ namespace WSJTX_Controller
             updateDebug();
             ResumeLayout();
             formLoaded = true;
+            timer4.Interval = 60000;           //pop up dialog showing UDP settings at tick
+            timer4.Start();
         }
         private void Controller_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -136,6 +141,7 @@ namespace WSJTX_Controller
         {
             if (timer1 != null) timer1.Stop();
             timer1 = null;
+            timer4.Stop();
             wsjtxClient.Closing();
         }
 
@@ -163,6 +169,11 @@ namespace WSJTX_Controller
             wsjtxClient.AddAltCallSeparator();
             timer3.Stop();
         }
+        private void timer4_Tick(object sender, EventArgs e)
+        {
+            timer4.Stop();
+            wsjtxClient.ConnectionDialog();
+         }
 
         private void timeoutNumUpDown_ValueChanged(object sender, EventArgs e)
         {
