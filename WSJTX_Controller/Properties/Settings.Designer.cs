@@ -226,5 +226,17 @@ namespace WSJTX_Controller.Properties {
                 this["skipGrid"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string configsChecked {
+            get {
+                return ((string)(this["configsChecked"]));
+            }
+            set {
+                this["configsChecked"] = value;
+            }
+        }
     }
 }

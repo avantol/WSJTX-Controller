@@ -61,7 +61,11 @@ namespace WSJTX_Controller
             string ipAddress = Properties.Settings.Default.ipAddress;
             int port = Properties.Settings.Default.port;
             bool multicast = Properties.Settings.Default.multicast;
+
+            //start the UDP message server
             wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Settings.Default.debug);
+
+            wsjtxClient.configsCheckedFromString(Properties.Settings.Default.configsChecked);
 
             timeoutNumUpDown.Value = Properties.Settings.Default.timeout;
             directedCheckBox.Checked = Properties.Settings.Default.useDirected;
@@ -119,6 +123,9 @@ namespace WSJTX_Controller
             Properties.Settings.Default.ipAddress = wsjtxClient.ipAddress.ToString();
             Properties.Settings.Default.port = wsjtxClient.port;
             Properties.Settings.Default.multicast = wsjtxClient.multicast;
+
+            Properties.Settings.Default.configsChecked = wsjtxClient.configsCheckedString();
+
             Properties.Settings.Default.timeout = (int)timeoutNumUpDown.Value;
             Properties.Settings.Default.useDirected = directedCheckBox.Checked;
             if (directedTextBox.Text == "(separate by spaces)") directedTextBox.Clear();
@@ -171,7 +178,6 @@ namespace WSJTX_Controller
         }
         private void timer4_Tick(object sender, EventArgs e)
         {
-            timer4.Stop();
             wsjtxClient.ConnectionDialog();
          }
 
@@ -307,6 +313,30 @@ namespace WSJTX_Controller
             skipGridCheckBox.Visible = true;
 
             wsjtxClient.advanced = true;
+        }
+
+        private void skipGridCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!formLoaded) return;
+            skipGridCheckBox.Text = "Skip grid (next CQ)";
+            skipGridCheckBox.ForeColor = Color.DarkGreen;
+            wsjtxClient.WsjtxSettingChanged();
+        }
+
+        private void useRR73CheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!formLoaded) return;
+            useRR73CheckBox.Text = "Use RR73 (next CQ)";
+            useRR73CheckBox.ForeColor = Color.DarkGreen;
+            wsjtxClient.WsjtxSettingChanged();
+        }
+
+        public void WsjtxSettingConfirmed()
+        {
+            skipGridCheckBox.Text = "Skip grid msg";
+            skipGridCheckBox.ForeColor = Color.Black;
+            useRR73CheckBox.Text = "Use RR73 msg";
+            useRR73CheckBox.ForeColor = Color.Black;
         }
     }
 }

@@ -428,6 +428,7 @@
             this.useRR73CheckBox.Text = "Use RR73 msg";
             this.useRR73CheckBox.UseVisualStyleBackColor = true;
             this.useRR73CheckBox.Visible = false;
+            this.useRR73CheckBox.CheckedChanged += new System.EventHandler(this.useRR73CheckBox_CheckedChanged);
             // 
             // skipGridCheckBox
             // 
@@ -439,6 +440,7 @@
             this.skipGridCheckBox.Text = "Skip grid msg";
             this.skipGridCheckBox.UseVisualStyleBackColor = true;
             this.skipGridCheckBox.Visible = false;
+            this.skipGridCheckBox.CheckedChanged += new System.EventHandler(this.skipGridCheckBox_CheckedChanged);
             // 
             // logEarlyCheckBox
             // 
