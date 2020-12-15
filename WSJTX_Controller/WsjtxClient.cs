@@ -32,7 +32,7 @@ namespace WSJTX_Controller
         public bool advanced;
         public string pgmName;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/212" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/212", "2.2.2/213" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4" };
 
         private bool suspendComm = false;
@@ -52,6 +52,8 @@ namespace WSJTX_Controller
         private WsjtxMessage.QsoStates qsoState = WsjtxMessage.QsoStates.CALLING;
         private string deCall = "";
         private string mode = "";
+        private bool modeSupported = true;
+        private bool? lastModeSupported = null;
         private string rawMode = "";
         private bool txFirst = false;
         private bool cQonly = false;
@@ -133,6 +135,7 @@ namespace WSJTX_Controller
             debug = reqDebug;
             opMode = OpModes.READY;
             WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
+            UpdateDebug();
             pgmName = ctrl.Text;      //or Assembly.GetExecutingAssembly().GetName().ToString();
 
             if (multicast)
@@ -255,6 +258,7 @@ namespace WSJTX_Controller
                     udpClient2.Connect(fromEp);
                     udpClient2.Send(ba, ba.Length);
                     WsjtxMessage.NegoState = WsjtxMessage.NegoStates.SENT;
+                    UpdateDebug();
                     Console.WriteLine($"{Time()} NegoState:{WsjtxMessage.NegoState}");
                     Console.WriteLine($"{Time()} >>>>>Sent'Heartbeat' msg:\n{tmsg}");
                     ShowStatus();
@@ -273,6 +277,7 @@ namespace WSJTX_Controller
                 HeartbeatMessage hmsg = (HeartbeatMessage)msg;
                 WsjtxMessage.NegotiatedSchemaVersion = hmsg.SchemaVersion;
                 WsjtxMessage.NegoState = WsjtxMessage.NegoStates.RECD;
+                UpdateDebug();
                 Console.WriteLine($"{Time()} NegoState:{WsjtxMessage.NegoState}");
                 Console.WriteLine($"{Time()} Negotiated schema version:{WsjtxMessage.NegotiatedSchemaVersion}");
                 UpdateDebug();
@@ -343,7 +348,7 @@ namespace WSJTX_Controller
 
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.RECD)
             {
-                if (supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0))
+                if (modeSupported)
                 {
                     //*************
                     //DecodeMessage
@@ -524,6 +529,7 @@ namespace WSJTX_Controller
                     if (firstCmdSent && !firstCmdChecked)
                     {
                         firstCmdChecked = true;
+                        Console.WriteLine($"{Time()} Check cmd rec'd: sent:{emsg.GenMsg} recd:{smsg.GenMsg}");
                         if (smsg.GenMsg != emsg.GenMsg)
                         {
                             suspendComm = true;
@@ -580,12 +586,22 @@ namespace WSJTX_Controller
                         lastSpecOp = specOp;
                     }
 
+                    //detect supported mode change
+                    modeSupported = supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0);
+                    if (modeSupported != lastModeSupported)
+                    {
+                        if (!modeSupported) failReason = $"{mode} mode not supported";
+                        lastModeSupported = modeSupported;
+                        ShowStatus();
+                    }
+
                     //check for time to flag starting first xmit
                     if (supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.READY)
                     {
                         opMode = OpModes.START;
                         ShowStatus();
                         ClearAltCallList();
+                        UpdateDebug();
                         Console.WriteLine($"{Time()} opMode:{opMode}");
                     }
 
@@ -680,6 +696,7 @@ namespace WSJTX_Controller
                     if (supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.START)
                     {
                         opMode = OpModes.ACTIVE;
+                        UpdateDebug();
                         Console.WriteLine($"{Time()} opMode:{opMode}");
                         ShowStatus();
                         ClearAltCallList();
@@ -692,12 +709,13 @@ namespace WSJTX_Controller
                         emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
                         ba = emsg.GetBytes();           //re-enable Tx for CQ
                         udpClient2.Send(ba, ba.Length);
-                        firstCmdSent = true;
                         setupCmd = emsg.GenMsg;
                         Console.WriteLine($"{Time()} >>>>>Sent 'Setup CQ' cmd:6\n{emsg}");
                         qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
                         Console.WriteLine($"{Time()} qsoState:{qsoState} (was {lastQsoState})");
                         lastQsoState = qsoState;
+                        if (!firstCmdSent) Console.WriteLine($"{Time()} Sending check cmd: sent:{emsg.GenMsg}");
+                        firstCmdSent = true;
                     }
                     UpdateDebug();
                     return;
@@ -987,6 +1005,8 @@ namespace WSJTX_Controller
         private void ResetOpMode()
         {
             opMode = OpModes.READY;
+            modeSupported = true;           //until otherwise detected
+            lastModeSupported = null;
             ShowStatus();
             lastMode = null;
             lastXmitting = false;
@@ -1305,11 +1325,13 @@ private bool RemoveCall(string call)
         {
             string status = "";
             System.Drawing.Color color = System.Drawing.Color.Red;
+            ctrl.statusText.ForeColor = System.Drawing.Color.White;
 
-            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.FAIL)
+            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.FAIL || !modeSupported)
             {
                 ctrl.statusText.Text = failReason;
-                color = System.Drawing.Color.Green;
+                ctrl.statusText.BackColor = System.Drawing.Color.Yellow;
+                ctrl.statusText.ForeColor = System.Drawing.Color.Black;
                 return;
             }
 
@@ -1655,7 +1677,7 @@ private bool RemoveCall(string call)
                 ctrl.label7.Text = $"txEnable: {txEnabled.ToString().Substring(0, 1)}";
 
                 ctrl.label8.Text = $"cmd from: {WsjtxMessage.DeCall(replyCmd)}";
-                ctrl.label9.Text = $"dxCall: {dxCall}";
+                ctrl.label9.Text = $"opMode: {opMode}";
 
                 string txTo = (txMsg ==  null ? "" : WsjtxMessage.ToCall(txMsg));
                 s = (txTo == "CQ" ? null : txTo);
@@ -1672,7 +1694,7 @@ private bool RemoveCall(string call)
 
                 ctrl.label10.Text = $"t/o: {txTimeout.ToString().Substring(0, 1)}";
                 ctrl.label11.Text = $"txFirst: {txFirst.ToString().Substring(0, 1)}";
-                ctrl.label16.Text = $"t/o call:{tCall}";
+                ctrl.label16.Text = $"Nego:{WsjtxMessage.NegoState}";
                 ctrl.label17.Text = $"Err: {errorDesc}";
             }
             catch (Exception err)
