@@ -163,7 +163,7 @@ namespace WsjtxUdpLib.Messages.Out
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append("Decode    ");
+            sb.Append("Decode     ");
             sb.Append($"{Col(SinceMidnight, 8, Align.Left)} ");
             sb.Append($"{Col(Snr, 3, Align.Right)} ");
             sb.Append($"{Col(DeltaFrequency, 4, Align.Right)} ");
@@ -203,7 +203,7 @@ namespace WsjtxUdpLib.Messages.Out
             decodeMessage.Mode = DecodeString(message, ref cur);
             decodeMessage.Message = DecodeString(message, ref cur);
 
-            //this actually happens, somehow
+            //this actually happens, because of AP (a priori) set
             //'W1AW K1HZ FN42                      ? a2'
             //01234567890123456789012345678901234567890
             //          1         2         3         4

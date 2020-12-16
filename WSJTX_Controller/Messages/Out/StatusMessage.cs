@@ -119,7 +119,7 @@ namespace WsjtxUdpLib.Messages.Out
                     statusMessage.QsoProgress = DecodeQUInt32(message, ref cur);
                     statusMessage.TxFirst = DecodeBool(message, ref cur);
                     statusMessage.CqOnly = DecodeBool(message, ref cur);
-                    if (cur < message.Length) statusMessage.GenMsg = DecodeString(message, ref cur);
+                    if (cur < message.Length) statusMessage.Check = DecodeString(message, ref cur);
                 }
             }
 
@@ -152,7 +152,7 @@ namespace WsjtxUdpLib.Messages.Out
         public UInt32 QsoProgress { get; set; }
         public bool TxFirst { get; set; }
         public bool CqOnly { get; set; }
-        public string GenMsg { get; set; }
+        public string Check { get; set; }
 
         public QsoStates CurQsoState()
         {
@@ -160,7 +160,7 @@ namespace WsjtxUdpLib.Messages.Out
         } 
 
         public override string ToString() 
-            => $"Status    {this.ToCompactLine(nameof(Id))}";
+            => $"Status     {this.ToCompactLine(nameof(Id))}";
     }
 
     public enum SpecialOperationMode : byte

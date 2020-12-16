@@ -21,6 +21,6 @@ namespace WsjtxUdpLib.Messages
 
         public byte[] GetBytes() => throw new NotImplementedException();
 
-        public override string ToString() => $"Close     {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"Close      {this.ToCompactLine(nameof(Id))}";
     }
 }

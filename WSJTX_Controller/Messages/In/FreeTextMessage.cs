@@ -61,6 +61,6 @@ namespace WsjtxUdpLib.Messages
                 return m.ToArray();
             }
         }
-        public override string ToString() => $"FreeText  {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"FreeText   {this.ToCompactLine(nameof(Id))}";
     }
 }

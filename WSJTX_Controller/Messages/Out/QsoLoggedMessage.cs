@@ -88,6 +88,6 @@ namespace WsjtxUdpLib.Messages.Out
             return qsoLoggedMessage;
         }
 
-        public override string ToString() => $"QSOLogged {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"QSOLogged  {this.ToCompactLine(nameof(Id))}";
     }
 }

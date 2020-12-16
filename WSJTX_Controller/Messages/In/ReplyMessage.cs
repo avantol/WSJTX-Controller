@@ -95,6 +95,6 @@ namespace WsjtxUdpLib.Messages
                 return m.ToArray();
             }
         }
-        public override string ToString() => $"Reply     {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"Reply      {this.ToCompactLine(nameof(Id))}";
     }
 }

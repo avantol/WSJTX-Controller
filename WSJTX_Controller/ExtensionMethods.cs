@@ -21,7 +21,7 @@ namespace WsjtxUdpLib
                     sb.Append(" ");
                     if ((++n % 6) == 0)
                     {
-                        sb.Append("\n          ");
+                        sb.Append("\n           ");
                     }
                 }
 

@@ -76,6 +76,6 @@ namespace WsjtxUdpLib.Messages.Out
         }
 
         public override string ToString() =>
-            $"WSPR      {this.ToCompactLine(nameof(Id))}";
+            $"WSPR       {this.ToCompactLine(nameof(Id))}";
     }
 }

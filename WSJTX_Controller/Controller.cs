@@ -23,6 +23,7 @@ namespace WSJTX_Controller
         public System.Windows.Forms.Timer timer2;
         public System.Windows.Forms.Timer timer3;
         public System.Windows.Forms.Timer timer4;
+        public System.Windows.Forms.Timer timer5;
 
         public Controller()
         {
@@ -35,6 +36,8 @@ namespace WSJTX_Controller
             timer3.Tick += new System.EventHandler(timer3_Tick);
             timer4 = new System.Windows.Forms.Timer();
             timer4.Tick += new System.EventHandler(timer4_Tick);
+            timer5 = new System.Windows.Forms.Timer();
+            timer5.Tick += new System.EventHandler(timer5_Tick);
         }
 
         [DllImport("Kernel32.dll")]
@@ -149,6 +152,7 @@ namespace WSJTX_Controller
             if (timer1 != null) timer1.Stop();
             timer1 = null;
             timer4.Stop();
+            timer5.Stop();
             wsjtxClient.Closing();
         }
 
@@ -171,16 +175,22 @@ namespace WSJTX_Controller
         {
             wsjtxClient.processDecodes();
         }
+
         private void timer3_Tick(object sender, EventArgs e)
         {
             wsjtxClient.AddAltCallSeparator();
             timer3.Stop();
         }
+
         private void timer4_Tick(object sender, EventArgs e)
         {
             wsjtxClient.ConnectionDialog();
-         }
+        }
 
+        private void timer5_Tick(object sender, EventArgs e)
+        {
+            wsjtxClient.CmdCheckDialog();
+        }
         private void timeoutNumUpDown_ValueChanged(object sender, EventArgs e)
         {
             if (timeoutNumUpDown.Value < WsjtxClient.minSkipCount)

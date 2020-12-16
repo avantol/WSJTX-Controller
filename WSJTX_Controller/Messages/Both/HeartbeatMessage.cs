@@ -72,7 +72,7 @@ namespace WsjtxUdpLib.Messages
         public string Version { get; set; }
         public string Revision { get; set; }
 
-        public override string ToString() => $"Heartbeat {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"Heartbeat  {this.ToCompactLine(nameof(Id))}";
         //public override string ToString() => $"Heartbeat id:{Id} schemaVersion:{SchemaVersion} maxSchemaNumber:{MaxSchemaNumber} version:{Version} revision:{Revision}";
 
         public byte[] GetBytes()

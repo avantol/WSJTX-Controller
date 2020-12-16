@@ -26,8 +26,9 @@ namespace WsjtxUdpLib.Messages
         public string Id { get; set; }
         public int NewTxMsgIdx { get; set; }
         public string GenMsg { get; set; }
-        public bool SkipGrid;
-        public bool UseRR73;
+        public bool SkipGrid { get; set; }
+        public bool UseRR73 { get; set; }
+        public string CmdCheck { get; set; }
 
         /*Public override string ToString()
         {
@@ -51,10 +52,11 @@ namespace WsjtxUdpLib.Messages
                     writer.Write(EncodeString(GenMsg));
                     writer.Write(EncodeBoolean(SkipGrid));
                     writer.Write(EncodeBoolean(UseRR73));
+                    writer.Write(EncodeString(CmdCheck));
                 }
                 return m.ToArray();
             }
         }
-        public override string ToString() => $"EnableTx  {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"EnableTx   {this.ToCompactLine(nameof(Id))}";
     }
 }

@@ -50,6 +50,6 @@ namespace WsjtxUdpLib.Messages.Both
                 return m.ToArray();
             }
         }
-        public override string ToString() => $"Clear     {this.ToCompactLine(nameof(Id))}";
+        public override string ToString() => $"Clear      {this.ToCompactLine(nameof(Id))}";
     }
 }
