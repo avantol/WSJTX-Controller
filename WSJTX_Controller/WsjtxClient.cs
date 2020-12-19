@@ -143,10 +143,21 @@ namespace WSJTX_Controller
 
             logToFile = (DateTime.Now - firstRunDateTime).TotalDays < 28;
             if (logToFile)
-            { 
-                sw = File.AppendText($"{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)}\\{Assembly.GetExecutingAssembly().GetName().Name.ToString()}\\log_{DateTime.Now.Date.ToShortDateString().Replace('/', '-')}.txt");
-                sw.AutoFlush = true;
-                DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting....");
+            {
+                try
+                {
+                    string path = $"{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)}\\{Assembly.GetExecutingAssembly().GetName().Name.ToString()}";
+                    if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                    sw = File.AppendText($"{path}\\log_{DateTime.Now.Date.ToShortDateString().Replace('/', '-')}.txt");
+                    sw.AutoFlush = true;
+                    DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting....");
+                }
+                catch (Exception err)
+                {
+                    err.ToString();
+                    logToFile = false;
+                    sw = null;
+                }
             }
 
             ResetNego();
