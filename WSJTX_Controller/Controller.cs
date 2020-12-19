@@ -47,6 +47,8 @@ namespace WSJTX_Controller
 
         private void Form_Load(object sender, EventArgs e)
         {
+            DateTime firstRunDateTime;
+
             SuspendLayout();
             AllocConsole();
 
@@ -61,12 +63,21 @@ namespace WSJTX_Controller
             if (Properties.Settings.Default.windowPos != new Point(0, 0)) Location = Properties.Settings.Default.windowPos;
             if (Properties.Settings.Default.windowHt != 0) Height = Properties.Settings.Default.windowHt;
 
+            if (Properties.Settings.Default.firstRunDateTime == DateTime.MinValue)
+            {
+                firstRunDateTime = DateTime.Now;
+            }
+            else
+            {
+                firstRunDateTime = Properties.Settings.Default.firstRunDateTime;
+            }
+
             string ipAddress = Properties.Settings.Default.ipAddress;
             int port = Properties.Settings.Default.port;
             bool multicast = Properties.Settings.Default.multicast;
 
             //start the UDP message server
-            wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Settings.Default.debug);
+            wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Settings.Default.debug, firstRunDateTime);
 
             wsjtxClient.configsCheckedFromString(Properties.Settings.Default.configsChecked);
 
@@ -106,6 +117,7 @@ namespace WSJTX_Controller
                 alertTextBox.ForeColor = System.Drawing.Color.Black;
             }
 
+
             timer1.Interval = 10;           //actual is 11-12 msec (due to OS limitations)
             timer1.Start();
 
@@ -142,6 +154,7 @@ namespace WSJTX_Controller
             Properties.Settings.Default.advanced = wsjtxClient.advanced;
             Properties.Settings.Default.useRR73 = useRR73CheckBox.Checked;
             Properties.Settings.Default.skipGrid = skipGridCheckBox.Checked;
+            Properties.Settings.Default.firstRunDateTime = wsjtxClient.firstRunDateTime;
 
             Properties.Settings.Default.Save();
             CloseComm();

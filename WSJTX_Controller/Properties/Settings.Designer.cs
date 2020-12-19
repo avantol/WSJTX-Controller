@@ -238,5 +238,16 @@ namespace WSJTX_Controller.Properties {
                 this["configsChecked"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.DateTime firstRunDateTime {
+            get {
+                return ((global::System.DateTime)(this["firstRunDateTime"]));
+            }
+            set {
+                this["firstRunDateTime"] = value;
+            }
+        }
     }
 }
