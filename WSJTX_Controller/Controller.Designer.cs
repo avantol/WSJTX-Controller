@@ -74,6 +74,7 @@
             this.timeoutNumUpDown = new System.Windows.Forms.NumericUpDown();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.setupButton = new System.Windows.Forms.Button();
             this.groupBox4.SuspendLayout();
             this.groupBox3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeoutNumUpDown)).BeginInit();
@@ -155,7 +156,7 @@
             this.verLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.verLabel.Location = new System.Drawing.Point(16, 542);
             this.verLabel.Name = "verLabel";
-            this.verLabel.Size = new System.Drawing.Size(268, 13);
+            this.verLabel.Size = new System.Drawing.Size(204, 13);
             this.verLabel.TabIndex = 0;
             this.verLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.verLabel.DoubleClick += new System.EventHandler(this.verLabel_DoubleClick);
@@ -399,7 +400,7 @@
             this.verLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.verLabel2.Location = new System.Drawing.Point(15, 556);
             this.verLabel2.Name = "verLabel2";
-            this.verLabel2.Size = new System.Drawing.Size(268, 13);
+            this.verLabel2.Size = new System.Drawing.Size(205, 13);
             this.verLabel2.TabIndex = 34;
             this.verLabel2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
@@ -557,11 +558,22 @@
             this.label2.TabIndex = 14;
             this.label2.Text = "TXs w/o progress";
             // 
+            // setupButton
+            // 
+            this.setupButton.Location = new System.Drawing.Point(226, 542);
+            this.setupButton.Name = "setupButton";
+            this.setupButton.Size = new System.Drawing.Size(57, 27);
+            this.setupButton.TabIndex = 35;
+            this.setupButton.Text = "Setup";
+            this.setupButton.UseVisualStyleBackColor = true;
+            this.setupButton.Click += new System.EventHandler(this.setupButton_Click);
+            // 
             // Controller
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(295, 678);
+            this.Controls.Add(this.setupButton);
             this.Controls.Add(this.verLabel2);
             this.Controls.Add(this.label17);
             this.Controls.Add(this.label16);
@@ -660,6 +672,7 @@
         public System.Windows.Forms.NumericUpDown timeoutNumUpDown;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Button setupButton;
     }
 }
 

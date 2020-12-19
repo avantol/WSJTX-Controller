@@ -348,5 +348,12 @@ namespace WSJTX_Controller
             useRR73CheckBox.Text = "Use RR73 msg";
             useRR73CheckBox.ForeColor = Color.Black;
         }
+
+        private void setupButton_Click(object sender, EventArgs e)
+        {
+            var dlg = new SetupDlg();
+            dlg.wsjtxClient = wsjtxClient;
+            dlg.Show();
+        }
     }
 }

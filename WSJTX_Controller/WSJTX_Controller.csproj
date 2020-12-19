@@ -86,6 +86,12 @@
     <Compile Include="Controller.Designer.cs">
       <DependentUpon>Controller.cs</DependentUpon>
     </Compile>
+    <Compile Include="SetupDlg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SetupDlg.Designer.cs">
+      <DependentUpon>SetupDlg.cs</DependentUpon>
+    </Compile>
     <Compile Include="WsjtxClient.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -99,6 +105,9 @@
     </Compile>
     <EmbeddedResource Include="Controller.resx">
       <DependentUpon>Controller.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SetupDlg.resx">
+      <DependentUpon>SetupDlg.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

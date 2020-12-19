@@ -170,8 +170,8 @@ namespace WSJTX_Controller
             ctrl.altListBox.DataSource = altCallList;
 
             string cast = multicast ? "(multicast)" : "(unicast)";
-            ctrl.verLabel.Text = $"by WM8Q v{fileVer} IP addr: {ipAddress}:{port} {cast}";
-            ctrl.verLabel2.Text = $"Want more features? more.avantol@xoxy.net";
+            ctrl.verLabel.Text = $"by WM8Q v{fileVer}";
+            ctrl.verLabel2.Text = $"More features? more.avantol@xoxy.net";
 
             ctrl.alertTextBox.Enabled = false;
             ctrl.directedTextBox.Enabled = false;
@@ -186,6 +186,44 @@ namespace WSJTX_Controller
             firstDecodeTime = DateTime.MinValue;
 
             UpdateDebug();          //last before starting loop
+        }
+
+        public void updateAddrPortMulti(IPAddress reqIpAddress, int reqPort, bool reqMulticast)
+        {
+            suspendComm = true;
+
+            try
+            {
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine(err);
+            }
+
+            ipAddress = reqIpAddress;
+            port = reqPort;
+            multicast = reqMulticast;
+            ctrl.CloseComm();
+            ctrl.Close();
+        }
+
+        public static void ReceiveCallback(IAsyncResult ar)
+        {
+            try
+            {
+                UdpClient u = ((UdpState)(ar.AsyncState)).u;
+                fromEp = ((UdpState)(ar.AsyncState)).e;
+                datagram = u.EndReceive(ar, ref fromEp);
+                //string receiveString = Encoding.ASCII.GetString(datagram);
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine($"Exception: ReceiveCallback() {err}");
+                return;
+            }
+
+            //Console.WriteLine($"Received: {receiveString}");
+            messageRecd = true;
         }
 
         public void UdpLoop()
@@ -1281,25 +1319,6 @@ private bool RemoveCall(string call)
         {
             PlaySound(strFileName, UIntPtr.Zero,
                0x00020001);
-        }
-
-        public static void ReceiveCallback(IAsyncResult ar)
-        {
-            try
-            {
-                UdpClient u = ((UdpState)(ar.AsyncState)).u;
-                fromEp = ((UdpState)(ar.AsyncState)).e;
-                datagram = u.EndReceive(ar, ref fromEp);
-                //string receiveString = Encoding.ASCII.GetString(datagram);
-            }
-            catch (Exception err)
-            {
-                Console.WriteLine($"Exception: ReceiveCallback() {err}");
-                return;
-            }
-
-            //Console.WriteLine($"Received: {receiveString}");
-            messageRecd = true;
         }
 
         private void ShowQueue()
