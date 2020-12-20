@@ -33,7 +33,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/214" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/214", "2.3.0-rc2/100", "2.3.0-rc2/101", "2.3.0-rc2/102", "2.3.0-rc2/103", "2.3.0-rc2/104", "2.3.0-rc2/105" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4" };
 
         private bool logToFile = false;
@@ -1875,7 +1875,7 @@ private bool RemoveCall(string call)
         {
             if (logToFile)
             {
-                sw.WriteLine(s);
+                if (sw != null) sw.WriteLine(s);
             }
 
             if (debug)
