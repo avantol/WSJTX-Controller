@@ -34,7 +34,7 @@ namespace WSJTX_Controller
         public DateTime firstRunDateTime;
 
         private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/214", "2.3.0-rc2/100", "2.3.0-rc2/101", "2.3.0-rc2/102", "2.3.0-rc2/103", "2.3.0-rc2/104", "2.3.0-rc2/105" };
-        private List<string> supportedModes = new List<string>() { "FT8", "FT4" };
+        private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         private bool logToFile = false;
         private StreamWriter sw;
