@@ -17,8 +17,10 @@ namespace WSJTX_Controller
 {
     public partial class Controller : Form
     {
-        private WsjtxClient wsjtxClient;
+        public WsjtxClient wsjtxClient;
         private bool formLoaded = false;
+        private SetupDlg setupDlg = null;
+
         private System.Windows.Forms.Timer timer1;
         public System.Windows.Forms.Timer timer2;
         public System.Windows.Forms.Timer timer3;
@@ -362,11 +364,22 @@ namespace WSJTX_Controller
             useRR73CheckBox.ForeColor = Color.Black;
         }
 
-        private void setupButton_Click(object sender, EventArgs e)
+        public void setupButton_Click(object sender, EventArgs e)
         {
-            var dlg = new SetupDlg();
-            dlg.wsjtxClient = wsjtxClient;
-            dlg.Show();
+            if (setupDlg != null)
+            {
+                setupDlg.BringToFront();
+                return;
+            }
+            setupDlg = new SetupDlg();
+            setupDlg.wsjtxClient = wsjtxClient;
+            setupDlg.ctrl = this;
+            setupDlg.Show();
+        }
+        
+        public void SetupDlgClosed()
+        {
+            setupDlg = null;
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net;
@@ -22,9 +23,11 @@ namespace WSJTX_Controller
 
 
         public WsjtxClient wsjtxClient;
+        public Controller ctrl;
 
         private void CancelButton_Click(object sender, EventArgs e)
         {
+            ctrl.SetupDlgClosed();
             Close();
         }
 
@@ -78,7 +81,7 @@ namespace WSJTX_Controller
             catch (Exception err)
             {
                 err.ToString();
-                res = MessageBox.Show($"The settings you selected will not work for this multicast mode.\n\nDo you want to use the standard settings instead?", wsjtxClient.pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                res = MessageBox.Show($"The settings you selected may not work for this multicast mode.\n\nDo you want to use the standard settings instead?", wsjtxClient.pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (res == DialogResult.No) return;
 
                 if (multicast)
@@ -90,13 +93,13 @@ namespace WSJTX_Controller
                     addrTextBox.Text = "127.0.0.1";
                 }
                 portTextBox.Text = "2237";
-
                 return;
             }
 
             //if no change, no need to notify
             if (wsjtxClient.ipAddress.ToString() == ipAddress.ToString() && wsjtxClient.port == port && wsjtxClient.multicast == multicast)
             {
+                ctrl.SetupDlgClosed();
                 Close();
                 return;
             }
@@ -105,6 +108,7 @@ namespace WSJTX_Controller
             if (res == DialogResult.Cancel) return;
 
             wsjtxClient.updateAddrPortMulti(ipAddress, port, multicast);
+            ctrl.SetupDlgClosed();
             Close();
         }
 

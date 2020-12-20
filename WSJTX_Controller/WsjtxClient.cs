@@ -163,16 +163,26 @@ namespace WSJTX_Controller
             ResetNego();
             UpdateDebug();
 
-            if (multicast)
+            try
             {
-                udpClient = new UdpClient();
-                udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udpClient.Client.Bind(endPoint = new IPEndPoint(IPAddress.Any, port));
-                udpClient.JoinMulticastGroup(ipAddress);
+                if (multicast)
+                {
+                    udpClient = new UdpClient();
+                    udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    udpClient.Client.Bind(endPoint = new IPEndPoint(IPAddress.Any, port));
+                    udpClient.JoinMulticastGroup(ipAddress);
+                }
+                else
+                {
+                    udpClient = new UdpClient(endPoint = new IPEndPoint(ipAddress, port));
+                }
             }
-            else
+            catch
             {
-                udpClient = new UdpClient(endPoint = new IPEndPoint(ipAddress, port));
+                MessageBox.Show($"Unable to connect with WSJT-X using the provided IP address ({ipAddress}) and port ({port}).\n\nEnter a different IP address/port in the dialog that follows.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ctrl.wsjtxClient = this;
+                ctrl.setupButton_Click(null, null);
+                return;
             }
 
             asyncCallback = new AsyncCallback(ReceiveCallback);
@@ -182,6 +192,7 @@ namespace WSJTX_Controller
 
             DebugOutput($"{Time()} NegoState:{WsjtxMessage.NegoState}");
             DebugOutput($"{Time()} opMode:{opMode}");
+
             DebugOutput($"{Time()} Waiting for heartbeat...");
 
             ShowStatus();
@@ -1774,7 +1785,8 @@ private bool RemoveCall(string call)
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.INITIAL)
             { 
                 suspendComm = true;         //in case udpClient msgs start 
-                ModelessDialog($"No response from WSJT-X.\n\nIs WSJT-X running?\nIs the WSJT-X 'UDP Server' set to {ipAddress}?\nIs the WSJT-X 'UDP Server port number' set to {port}?\nIs the WSJT-X 'Accept UDP requests' selection enabled?\n\nSelect 'File | Settings', in the 'Reporting' tab to view these settings.\n\n{pgmName} will continue waiting for WSJT-X to respond when you close this dialog.");
+                string s = multicast ? "\nTry a different 'Outgoing interface'." : "";
+                ModelessDialog($"No response from WSJT-X.\n\nIs WSJT-X running? If so:\nIs the WSJT-X 'UDP Server' set to {ipAddress}?\nIs the WSJT-X 'UDP Server port number' set to {port}?\nIs the WSJT-X 'Accept UDP requests' selection enabled?{s}\n\nSelect 'File | Settings', in the 'Reporting' tab to view these settings.\n\n{pgmName} will continue waiting for WSJT-X to respond when you close this dialog.");
                 suspendComm = false;
             }
         }
@@ -1807,8 +1819,7 @@ private bool RemoveCall(string call)
 
         private void ModelessDialog(string text)
         {
-            //Play("beepbeep.wav");
-            new Thread(new ThreadStart(delegate
+           new Thread(new ThreadStart(delegate
             {
                 MessageBox.Show
                 (
@@ -1868,7 +1879,8 @@ private bool RemoveCall(string call)
         private string RandomCheckString()
         {
             string s = rnd.Next().ToString();
-            return s.Substring(0, 8);
+            if (s.Length > 8) s = s.Substring(0, 8);
+            return s;
         }
 
         private void DebugOutput(string s)
