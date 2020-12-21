@@ -107,7 +107,7 @@ namespace WSJTX_Controller
             res = MessageBox.Show($"{wsjtxClient.pgmName} will exit now, restart {wsjtxClient.pgmName} for the new settings to take effect", wsjtxClient.pgmName, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
             if (res == DialogResult.Cancel) return;
 
-            wsjtxClient.updateAddrPortMulti(ipAddress, port, multicast);
+            wsjtxClient.UpdateAddrPortMulti(ipAddress, port, multicast);
             ctrl.SetupDlgClosed();
             Close();
         }

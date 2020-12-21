@@ -81,7 +81,7 @@ namespace WSJTX_Controller
             //start the UDP message server
             wsjtxClient = new WsjtxClient(this, IPAddress.Parse(ipAddress),port, multicast, Properties.Settings.Default.debug, firstRunDateTime);
 
-            wsjtxClient.configsCheckedFromString(Properties.Settings.Default.configsChecked);
+            wsjtxClient.ConfigsCheckedFromString(Properties.Settings.Default.configsChecked);
 
             timeoutNumUpDown.Value = Properties.Settings.Default.timeout;
             directedCheckBox.Checked = Properties.Settings.Default.useDirected;
@@ -141,7 +141,7 @@ namespace WSJTX_Controller
             Properties.Settings.Default.port = wsjtxClient.port;
             Properties.Settings.Default.multicast = wsjtxClient.multicast;
 
-            Properties.Settings.Default.configsChecked = wsjtxClient.configsCheckedString();
+            Properties.Settings.Default.configsChecked = wsjtxClient.ConfigsCheckedString();
 
             Properties.Settings.Default.timeout = (int)timeoutNumUpDown.Value;
             Properties.Settings.Default.useDirected = directedCheckBox.Checked;
@@ -188,7 +188,7 @@ namespace WSJTX_Controller
 
         private void timer2_Tick(object sender, EventArgs e)
         {
-            wsjtxClient.processDecodes();
+            wsjtxClient.ProcessDecodes();
         }
 
         private void timer3_Tick(object sender, EventArgs e)
