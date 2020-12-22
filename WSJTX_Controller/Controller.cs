@@ -23,7 +23,6 @@ namespace WSJTX_Controller
 
         private System.Windows.Forms.Timer timer1;
         public System.Windows.Forms.Timer timer2;
-        public System.Windows.Forms.Timer timer3;
         public System.Windows.Forms.Timer timer4;
         public System.Windows.Forms.Timer timer5;
 
@@ -34,8 +33,6 @@ namespace WSJTX_Controller
             timer1.Tick += new System.EventHandler(timer1_Tick);
             timer2 = new System.Windows.Forms.Timer();
             timer2.Tick += new System.EventHandler(timer2_Tick);
-            timer3 = new System.Windows.Forms.Timer();
-            timer3.Tick += new System.EventHandler(timer3_Tick);
             timer4 = new System.Windows.Forms.Timer();
             timer4.Tick += new System.EventHandler(timer4_Tick);
             timer5 = new System.Windows.Forms.Timer();
@@ -189,12 +186,6 @@ namespace WSJTX_Controller
         private void timer2_Tick(object sender, EventArgs e)
         {
             wsjtxClient.ProcessDecodes();
-        }
-
-        private void timer3_Tick(object sender, EventArgs e)
-        {
-            wsjtxClient.AddAltCallSeparator();
-            timer3.Stop();
         }
 
         private void timer4_Tick(object sender, EventArgs e)

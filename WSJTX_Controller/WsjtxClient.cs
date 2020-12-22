@@ -89,7 +89,6 @@ namespace WSJTX_Controller
         private string qCall = null;            //call sign for last QSO logged
         private string tCall = null;            //call sign being processed at timeout
         private string txMsg = null;            //msg for the most-recent Tx
-        private bool decodedMsgReplied = false;  //no decoded msgs replied yet in current decoding phase
         private List<string> logList = new List<string>();
 
         private AsyncCallback asyncCallback;
@@ -109,6 +108,7 @@ namespace WSJTX_Controller
         private Random rnd = new Random();
         TimeSpan latestDecodeTime;
         DateTime firstDecodeTime;
+        private bool firstDecodeInPeriod = true;
 
         private struct UdpState
         {
@@ -289,7 +289,7 @@ namespace WSJTX_Controller
             try
             {
                 msg = WsjtxMessage.Parse(datagram);
-                //DebugOutput($"{Time()} msg:{msg}");            //tempOnly
+                //DebugOutput($"{Time()} msg:{msg}");
             }
             catch (ParseFailureException ex)
             {
@@ -439,8 +439,17 @@ namespace WSJTX_Controller
                             if (deCall != null)
                             {
                                 //add the decodes having the opposite time from the Tx 1st checkbox in WSJT-X
-                                if (((dmsg.SinceMidnight.Seconds % (trPeriod / 500)) == 0) != txFirst) AddAltCall(dmsg);
-
+                                if (((dmsg.SinceMidnight.Seconds % (trPeriod / 500)) == 0) != txFirst)
+                                {
+                                    if (firstDecodeInPeriod) AddAltCallSeparator();
+                                    firstDecodeInPeriod = false;
+                                    AddAltCall(dmsg);
+                                }
+                                else
+                                {
+                                    firstDecodeInPeriod = true;
+                                }
+                                    
                                 //check for directed CQ
                                 if (ctrl.alertCheckBox.Checked)
                                 {
@@ -456,72 +465,58 @@ namespace WSJTX_Controller
                             //decode processing of calls to myCall requires txEnabled
                             if (txEnabled && deCall != null && myCall != null && dmsg.IsCallTo(myCall))
                             {
-                                DebugOutput($"           *'{deCall}' is to {myCall}");  //tempOnly
+                                DebugOutput($"           *'{deCall}' is to {myCall}");
                                 // not xmitting yet    
                                 if (/*!transmitting*/ true)      //todo: can process decodes after Tx starts?
                                 {
                                     if (!dmsg.Is73orRR73())       //not a 73 or RR73
                                     {
-                                        DebugOutput($"           *Not a 73 or RR73");  //tempOnly
+                                        DebugOutput($"           *Not a 73 or RR73");
                                         if (!callQueue.Contains(deCall))        //call not in queue, possibly enqueue the call data
                                         {
-                                            DebugOutput($"           *'{deCall}' not already in queue");  //tempOnly
-                                            if (qsoState == WsjtxMessage.QsoStates.CALLING && !decodedMsgReplied)
+                                            DebugOutput($"           *'{deCall}' not already in queue");
+                                            if (qsoState == WsjtxMessage.QsoStates.CALLING && callQueue.Count == 0)
                                             {
-                                                DebugOutput($"           *CALLING, no decode replied yet this cycle, reply now txTimeout:{txTimeout}");  //tempOnly
-                                                //WSJT-X CQing, is ready to process this call
-                                                //set WSJT-X call enable with Reply message
-                                                txTimeout = false;   //cancel any pending timeout (like for directed CQ or WSJT-X setting changed)
-                                                var rmsg = new ReplyMessage();
-                                                rmsg.SchemaVersion = WsjtxMessage.NegotiatedSchemaVersion;
-                                                rmsg.Id = WsjtxMessage.UniqueId;
-                                                rmsg.SinceMidnight = dmsg.SinceMidnight;
-                                                rmsg.Snr = dmsg.Snr;
-                                                rmsg.DeltaTime = dmsg.DeltaTime;
-                                                rmsg.DeltaFrequency = dmsg.DeltaFrequency;
-                                                rmsg.Mode = dmsg.Mode;
-                                                rmsg.Message = dmsg.Message;
-                                                rmsg.LowConfidence = dmsg.LowConfidence;
-                                                ba = rmsg.GetBytes();
-                                                udpClient2.Send(ba, ba.Length);
-                                                replyCmd = dmsg.Message;        //save the last reply cmd to determine which call is in progress
-                                                replyDecode = dmsg;             //save the decode the reply cmd came from
-                                                DebugOutput($"{Time()} >>>>>Sent 'Reply To Msg', txTimeout:{txTimeout} cmd:\n{rmsg}\nreplyCmd:'{replyCmd}'");
-                                                decodedMsgReplied = true;       //no more replies during rest of pass(es) in current decoding phases
-                                           }
-                                            else   //not CALLING or a decode already replied to this cycle
+                                                if (deCall != CallInProgress())                //call currently being processed by WSJT-X
+                                                {
+                                                    DebugOutput($"           *callQueue empty, adding '{deCall}', not currently being processed");
+                                                    AddCall(deCall, dmsg);
+                                                    txTimeout = true;
+                                                }
+                                            }
+                                            else   //not CALLING or call queue has entries
                                             {
-                                                DebugOutput($"           *not CALLING (is {qsoState}) or a decode already replied to this cycle {decodedMsgReplied}");     //tempOnly
-                                                DebugOutput($"           *last Tx 'to':({WsjtxMessage.ToCall(txMsg)}), last cmd 'from':({WsjtxMessage.DeCall(replyCmd)})");     //tempOnly
+                                                DebugOutput($"           *calls queued or not CALLING (is {qsoState})");
+                                                DebugOutput($"           *last Tx 'to':({WsjtxMessage.ToCall(txMsg)}), last cmd 'from':({WsjtxMessage.DeCall(replyCmd)})");
                                                 if (deCall == CallInProgress())                //call currently being processed by WSJT-X
                                                 {
-                                                    DebugOutput($"           *'{deCall}' currently being processed by WSJT-X:");    //tempOnly
+                                                    DebugOutput($"           *'{deCall}' currently being processed");
                                                 }
                                                 else
                                                 {
-                                                    DebugOutput($"           *'{deCall}' not currently being processed by WSJT-X");     //tempOnly
+                                                    DebugOutput($"           *'{deCall}' not currently being processed");
                                                     AddCall(deCall, dmsg);          //known to not be in queue
                                                 }
                                             }
                                         }
                                         else       //call is already in queue, possibly update the call data
                                         {
-                                            DebugOutput($"           *'{deCall}' already in queue");     //tempOnly
+                                            DebugOutput($"           *'{deCall}' already in queue");
                                             if (deCall == CallInProgress())                //call currently being processed by WSJT-X
                                             {
-                                                DebugOutput($"           *'{deCall}' currently being processed by WSJT-X");     //tempOnly
+                                                DebugOutput($"           *'{deCall}' currently being processed");
                                                 RemoveCall(deCall);             //may have been queued previously
                                             }
                                             else        //update the call in queue
                                             {
-                                                DebugOutput($"           *'{deCall}' not currently being processed by WSJT-X, update queue");     //tempOnly
+                                                DebugOutput($"           *'{deCall}' not currently being processed, update queue");
                                                 UpdateCall(deCall, dmsg);
                                             }
                                         }
                                     }
                                     else        //decode is 73 or RR73 msg
                                     {
-                                        DebugOutput($"           *decode is 73 or RR73 msg, tCall:{tCall}, cur Tx to:'{WsjtxMessage.DeCall(txMsg)}' cur Tx IsRogers:{WsjtxMessage.IsRogers(txMsg)}");     //tempOnly
+                                        DebugOutput($"           *decode is 73 or RR73 msg, tCall:{tCall}, cur Tx to:'{WsjtxMessage.DeCall(txMsg)}' cur Tx IsRogers:{WsjtxMessage.IsRogers(txMsg)}");
                                         /* to-do: need to set up WSJT-X with valid QSO data first
                                         //check for last-chance logging (73 after current QSO just ended)
                                         //  was not logged early at RRR sent  same call timed out  prev Tx msg was to myCall           prev Tx msg was a RRR
@@ -552,7 +547,7 @@ namespace WSJTX_Controller
                         //ack'ing either early or normal logging
                         //WSJT-X's auto-logging is disabled
                         QsoLoggedMessage lmsg = (QsoLoggedMessage)msg;
-                        DebugOutput($"{lmsg}");         //tempOnly
+                        DebugOutput($"{lmsg}");
                         qCall = lmsg.DxCall;
                         if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
                         logList.Add(qCall);    //even if already logged this mode/band
@@ -622,7 +617,6 @@ namespace WSJTX_Controller
                         if (transmitting)
                         {
                             StartTimer2();
-                            decodedMsgReplied = false;          //decode passes finished
                             ProcessTxStart();
                             if (firstDecodeTime == DateTime.MinValue) firstDecodeTime = DateTime.Now;       //start counting until WSJT-X watchdog timer set
                         }
@@ -794,7 +788,7 @@ namespace WSJTX_Controller
             DateTime dtNow = DateTime.UtcNow;
             int diffMsec = ((dtNow.Second * 1000) + dtNow.Millisecond) % (int)trPeriod;
             int cycleTimerAdj = (mode == "FT8" ? 300 : (mode == "FT4" ? 500 : 0));      //msec
-            ctrl.timer2.Interval = (2 * (int)trPeriod) - diffMsec - cycleTimerAdj;     //tempOnly
+            ctrl.timer2.Interval = (2 * (int)trPeriod) - diffMsec - cycleTimerAdj;
             ctrl.timer2.Start();
             DebugOutput($"\n{Time()} StartTimer2: interval:{ctrl.timer2.Interval} msec");
         }
@@ -832,13 +826,13 @@ namespace WSJTX_Controller
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
                 replyDecode = null;
-                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");   //tempOnly
+                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:{tCall}");
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
-                if (txTimeout && tCall != null)     //null if call added manually, and must be processed below
+                if (tCall != null)     //null if call added manually, and must be processed below
                 {
-                    DebugOutput($"           *{tCall} might be in process in WSJT-X but timed out");       //tempOnly
-                    RemoveCall(tCall);  //tempOnly
+                    DebugOutput($"           *{tCall} might be in process but timed out");
+                    RemoveCall(tCall);
                 }
 
                 //process the next call in the queue. if any present
@@ -846,7 +840,7 @@ namespace WSJTX_Controller
                 {
                     DecodeMessage dmsg = new DecodeMessage();
                     string nCall = GetNextCall(out dmsg);
-                    DebugOutput($"           *Have entries in queue, got {nCall}");       //tempOnly
+                    DebugOutput($"           *Have entries in queue, got {nCall}"); 
 
                     //set WSJT-X call enable with Reply message
                     var rmsg = new ReplyMessage();
@@ -867,7 +861,7 @@ namespace WSJTX_Controller
                 }
                 else            //no queued call signs, start CQing
                 {
-                    DebugOutput($"           *No entries in queue, start CQing");       //tempOnly
+                    DebugOutput($"           *No entries in queue, start CQing");
                     emsg.NewTxMsgIdx = 6;
                     emsg.GenMsg = $"CQ{NextDirCq()} {myCall} {myGrid}";
                     emsg.SkipGrid = ctrl.skipGridCheckBox.Checked;
@@ -893,10 +887,8 @@ namespace WSJTX_Controller
         public void ProcessDecodes()
         {
             DebugOutput($"\n{Time()} Timer2 tick: txEnabled:{txEnabled} txTimeout:{txTimeout}");
-            if (ctrl == null) DebugOutput($"ERROR: ctrl is null");            //tempOnly
-            if (ctrl.timer2 == null) DebugOutput($"ERROR: timer2 is null");   //tempOnly
             ctrl.timer2.Stop();
-            DebugOutput($"           *timer2 stopped");                             //tempOnly
+            DebugOutput($"           *timer2 stopped");
             if (txEnabled) CheckNextXmit();
             DebugOutput($"{Time()} Timer2 tick done\n");
         }
@@ -906,7 +898,7 @@ namespace WSJTX_Controller
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
-            DebugOutput($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}' replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
+            DebugOutput($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}'\n           replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
             //check for WSJT-X ready to respond to a 73/RR73 that is not from the last Tx 'to'
             // msg to be sent is 73               msg to be sent 'to'      is not  replyCmd 'from' (i.e.: WSJT-X ignored last reply cmd)
             if (WsjtxMessage.Is73orRR73(txMsg) && replyCmd != null && WsjtxMessage.ToCall(txMsg) != null 
@@ -951,6 +943,7 @@ namespace WSJTX_Controller
         //check for QSO end or timeout (and possibly logging (if txMsg changed between TX start and Tx end)
         private void ProcessTxEnd()
         {
+            firstDecodeInPeriod = true;
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
             DebugOutput($"\n{Time()} Tx end: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall: {tCall}\n           toCall:'{toCall}' lastToCall:'{lastToCall} qsoLogged:{qsoLogged}'");
@@ -1512,11 +1505,13 @@ private bool RemoveCall(string call)
             }
 
             //DebugOutput($"\n{Time()} AddAltCall '{dmsg.Message}'\n{AltCallListString()}");
+            /*  try list with duplicates (easier to find calls that way)    tempOnly
             if (altCallList.Contains(dmsg.Message))         //don't need duplicates, but show latest, in sequence
             {
                 altCallList.Remove(dmsg.Message);     //remove from somewhere in the list
                 //DebugOutput($"           after remove:'{dmsg.Message}'\n{AltCallListString()}");
             }
+            */
             latestDecodeTime = dmsg.SinceMidnight;
             altCallList.Add(dmsg.Message);      //save the message body
             //DebugOutput($"           after add:'{dmsg.Message}'\n{AltCallListString()}");
@@ -1534,10 +1529,10 @@ private bool RemoveCall(string call)
             //DebugOutput($"           after add deCall:'{deCall}' msg:'{dmsg.Message}' raw:'{dmsg}'\n{AltCallDictString()}");
 
             //shorten list
-            if (altCallList.Count > 64)
+            if (altCallList.Count > 128)
             {
                 string remDeCall = WsjtxMessage.DeCall(altCallList[0]);          //the 'from' call being removed (might be a separator)
-                //DebugOutput($"           shorten altCallList, remDeCall:'{remDeCall}' msg:{altCallList[0]}");
+                //DebugOutput($"{Time()} AddAltCall: shorten altCallList, remDeCall:'{remDeCall}' msg:{altCallList[0]}");
                 altCallList.RemoveAt(0);
                 //DebugOutput($"           after remove remDeCall:'{remDeCall}'\n{AltCallListString()}");
 
@@ -1558,8 +1553,8 @@ private bool RemoveCall(string call)
                     {
                         //DebugOutput($"           shorten altCallDict, remDeCall:'{remDeCall}'");
                         if (altCallDict.ContainsKey(remDeCall)) altCallDict.Remove(remDeCall);
-                        //DebugOutput($"           after remove remDeCall:'{remDeCall}'\n{AltCallDictString()}");
                     }
+                    //DebugOutput($"{Time()} AddAltCall: after check altCallDict, remDeCall:'{remDeCall}'");
                 }
             }
 
@@ -1569,10 +1564,6 @@ private bool RemoveCall(string call)
             ctrl.altListBox.DataSource = altCallList;
             ctrl.altListBox.ClearSelected();
             ctrl.altListBox.TopIndex = ctrl.altListBox.Items.Count - 1;
-
-            ctrl.timer3.Stop();         //set timer for after last decode
-            ctrl.timer3.Interval = 3000;
-            ctrl.timer3.Start();
         }
 
         public void AddAltCallSeparator()
@@ -1588,7 +1579,6 @@ private bool RemoveCall(string call)
 
         public void ClearAltCallList()
         {
-            ctrl.timer3.Stop();     //stop adding separators
             ctrl.altListBox.DataSource = null;
             altCallList.Clear();
             altCallDict.Clear();
@@ -1813,7 +1803,7 @@ private bool RemoveCall(string call)
             if (!debug) return;
             string s;
 
-            try             //tempOnly
+            try
             {
                 ctrl.label5.Text = $"xmit: {transmitting.ToString().Substring(0, 1)}";
                 ctrl.label6.Text = $"UDP: {msg.GetType().Name.Substring(0, 6)}";
