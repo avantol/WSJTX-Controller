@@ -482,6 +482,7 @@ namespace WSJTX_Controller
                                                     DebugOutput($"           *callQueue empty, adding '{deCall}', not currently being processed");
                                                     AddCall(deCall, dmsg);
                                                     txTimeout = true;
+                                                    tCall = null;                       //prevent call removal from queue
                                                 }
                                             }
                                             else   //not CALLING or call queue has entries
