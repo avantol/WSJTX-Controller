@@ -120,6 +120,7 @@ namespace WsjtxUdpLib.Messages.Out
         //private string[] messageWords;
         public bool New { get; set; }
         public TimeSpan SinceMidnight { get; set; }
+        public DateTime RxDate { get; set; }
         public int Snr { get; set; }
         public double DeltaTime { get; set; }
         public int DeltaFrequency { get; set; }
@@ -129,7 +130,7 @@ namespace WsjtxUdpLib.Messages.Out
         //01234567890123456789012345678901234567890 posn
         //          1         2         3         4  
         public string Message { get; set; }
-        public bool LowConfidence { get; set; }
+        public bool UseStdReply { get; set; }
         /// <summary>
         ///  True to indicate the decode was derived from a .WAV file playback, false when decoded from an on air reception.
         /// </summary>
@@ -169,7 +170,7 @@ namespace WsjtxUdpLib.Messages.Out
             sb.Append($"{Col(DeltaFrequency, 4, Align.Right)} ");
             sb.Append($"{Col(DeltaTime, 4, Align.Right)} ");
             sb.Append($"{Col(Mode, 1, Align.Left)} ");
-            sb.Append($"{(LowConfidence ? "LC" : "  ")} ");
+            sb.Append($"{(UseStdReply ? "LC" : "  ")} ");
             sb.Append($"{Col(Message, 20, Align.Left)} ");
 
             return sb.ToString();
@@ -197,6 +198,7 @@ namespace WsjtxUdpLib.Messages.Out
             decodeMessage.Id = DecodeString(message, ref cur);
             decodeMessage.New = DecodeBool(message, ref cur);
             decodeMessage.SinceMidnight = DecodeQTime(message, ref cur);
+            decodeMessage.RxDate = DateTime.UtcNow.Date;
             decodeMessage.Snr = DecodeQInt32(message, ref cur);
             decodeMessage.DeltaTime = DecodeDouble(message, ref cur);
             decodeMessage.DeltaFrequency = DecodeQInt32(message, ref cur);
@@ -207,18 +209,79 @@ namespace WsjtxUdpLib.Messages.Out
             //'W1AW K1HZ FN42                      ? a2'
             //01234567890123456789012345678901234567890
             //          1         2         3         4
-            int idx = decodeMessage.Message.IndexOf("        ");
+            int idx = decodeMessage.Message.IndexOf("   ");
             if (idx != -1)
             {
                 decodeMessage.Message = decodeMessage.Message.Substring(0, idx);
             }
 
-            decodeMessage.LowConfidence = DecodeBool(message, ref cur);
+            //hashed message case, brackets and only two words:
+            // <K1JT> KG6EMU/AG
+            decodeMessage.Message = RemoveAngleBrackets(decodeMessage.Message);
+
+            decodeMessage.UseStdReply = false; //used in ReplyToCq, was: DecodeBool(message, ref cur);
             decodeMessage.OffAir = DecodeBool(message, ref cur);
 
             //decodeMessage.messageWords = decodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
             return decodeMessage;
+        }
+    }
+
+    public class EnqueueDecodeMessage : DecodeMessage
+    {
+        public bool Modifier { get; set; }
+
+        public static new WsjtxMessage Parse(byte[] message)
+        {
+            if (!CheckMagicNumber(message))
+            {
+                return null;
+            }
+
+            var enqueueDecodeMessage = new EnqueueDecodeMessage();
+
+            int cur = MAGIC_NUMBER_LENGTH;
+            enqueueDecodeMessage.SchemaVersion = DecodeQInt32(message, ref cur);
+
+            var messageType = (MessageType)DecodeQInt32(message, ref cur);
+
+            if (messageType != MessageType.ENQUEUE_DECODE_MESSAGE_TYPE)
+            {
+                return null;
+            }
+
+            enqueueDecodeMessage.Id = DecodeString(message, ref cur);
+            enqueueDecodeMessage.New = DecodeBool(message, ref cur);
+            enqueueDecodeMessage.SinceMidnight = DecodeQTime(message, ref cur);
+            enqueueDecodeMessage.RxDate = DateTime.UtcNow.Date;
+            enqueueDecodeMessage.Snr = DecodeQInt32(message, ref cur);
+            enqueueDecodeMessage.DeltaTime = DecodeDouble(message, ref cur);
+            enqueueDecodeMessage.DeltaFrequency = DecodeQInt32(message, ref cur);
+            enqueueDecodeMessage.Mode = DecodeString(message, ref cur);
+            enqueueDecodeMessage.Message = DecodeString(message, ref cur);
+
+            //this actually happens, because of AP (a priori) set
+            //'W1AW K1HZ FN42                      ? a2'
+            //01234567890123456789012345678901234567890
+            //          1         2         3         4
+            int idx = enqueueDecodeMessage.Message.IndexOf("        ");
+            if (idx != -1)
+            {
+                enqueueDecodeMessage.Message = enqueueDecodeMessage.Message.Substring(0, idx);
+            }
+
+            //hashed message case, brackets and only two words:
+            // <K1JT> KG6EMU/AG
+            enqueueDecodeMessage.Message = RemoveAngleBrackets(enqueueDecodeMessage.Message);
+
+            enqueueDecodeMessage.UseStdReply = false;  //used in ReplyToCq
+            DecodeBool(message, ref cur);              //skip over
+            enqueueDecodeMessage.Modifier = DecodeBool(message, ref cur);
+
+            //enqueueDecodeMessage.messageWords = enqueueDecodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            return enqueueDecodeMessage;
         }
     }
 }

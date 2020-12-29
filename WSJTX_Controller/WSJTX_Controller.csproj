@@ -56,6 +56,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExtensionMethods.cs" />
+    <Compile Include="ErrorDlg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ErrorDlg.Designer.cs">
+      <DependentUpon>ErrorDlg.cs</DependentUpon>
+    </Compile>
     <Compile Include="Messages\Both\ClearMessage.cs" />
     <Compile Include="Messages\Both\CloseMessage.cs" />
     <Compile Include="Messages\Both\HeartbeatMessage.cs" />
@@ -93,6 +99,9 @@
       <DependentUpon>SetupDlg.cs</DependentUpon>
     </Compile>
     <Compile Include="WsjtxClient.cs" />
+    <EmbeddedResource Include="ErrorDlg.resx">
+      <DependentUpon>ErrorDlg.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

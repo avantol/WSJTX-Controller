@@ -118,7 +118,7 @@ namespace WsjtxUdpLib.Messages.Out
                     statusMessage.LastTxMsg = DecodeString(message, ref cur);
                     statusMessage.QsoProgress = DecodeQUInt32(message, ref cur);
                     statusMessage.TxFirst = DecodeBool(message, ref cur);
-                    statusMessage.CqOnly = DecodeBool(message, ref cur);
+                    statusMessage.DblClk = DecodeBool(message, ref cur);
                     if (cur < message.Length) statusMessage.Check = DecodeString(message, ref cur);
                 }
             }
@@ -151,7 +151,7 @@ namespace WsjtxUdpLib.Messages.Out
         public string LastTxMsg { get; set; }
         public UInt32 QsoProgress { get; set; }
         public bool TxFirst { get; set; }
-        public bool CqOnly { get; set; }
+        public bool DblClk { get; set; }
         public string Check { get; set; }
 
         public QsoStates CurQsoState()

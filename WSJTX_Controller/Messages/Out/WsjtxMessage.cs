@@ -55,7 +55,7 @@ namespace WsjtxUdpLib.Messages.Out
             if (msg == null) return null;
             msg = RemoveAngleBrackets(msg);
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Count() < 3 || words.Count() > 4) return null;
+            if (words.Count() < 2 || words.Count() > 4) return null;
             if (words[0].Contains("CQ") && words.Count() == 4)      //directed CQ
             {
                 return words[2];
@@ -66,6 +66,7 @@ namespace WsjtxUdpLib.Messages.Out
 
         public static string RemoveAngleBrackets(string s)
         {
+            if (s == null) return null;
             s = s.Replace("<", "");
             s = s.Replace(">", "");
             return s;
@@ -153,6 +154,19 @@ namespace WsjtxUdpLib.Messages.Out
             if (words[0] != "CQ") return null;
             return words[1];
         }
+
+        //msg in the form "WIAW K2JT +03" or "W1AW K1JT R-04"
+        //return RST received from DX station as string (without "R");
+        //return null if neither a Report or a RogerReport
+        public static string RstRecd(string msg)
+        {
+            if (msg == null) return null;
+            if (!IsReport(msg) && !IsRogerReport(msg)) return null;
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            //already know words.Length and validity of numeric value
+            return words[2].Replace("R", "");
+        }
+
         public static void Reinit() {
             NegotiatedSchemaVersion = 2;
             NegoState = (int)NegoStates.INITIAL;
@@ -187,6 +201,10 @@ namespace WsjtxUdpLib.Messages.Out
                     else if (messageType == MessageType.DECODE_MESSAGE_TYPE)
                     {
                         result = DecodeMessage.Parse(datagram);
+                    }
+                    else if (messageType == MessageType.ENQUEUE_DECODE_MESSAGE_TYPE)
+                    {
+                        result = EnqueueDecodeMessage.Parse(datagram);
                     }
                     else if (messageType == MessageType.CLEAR_MESSAGE_TYPE)
                     {

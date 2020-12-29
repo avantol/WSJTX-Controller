@@ -11,7 +11,8 @@ using System.Runtime.InteropServices;
 using WsjtxUdpLib;
 using System.Net;
 using System.Configuration;
-
+using System.Threading;
+using System.Media;
 
 namespace WSJTX_Controller
 {
@@ -20,11 +21,15 @@ namespace WSJTX_Controller
         public WsjtxClient wsjtxClient;
         private bool formLoaded = false;
         private SetupDlg setupDlg = null;
+        private ErrorDlg errDlg = null;
 
         private System.Windows.Forms.Timer timer1;
         public System.Windows.Forms.Timer timer2;
+        public System.Windows.Forms.Timer timer3;
         public System.Windows.Forms.Timer timer4;
         public System.Windows.Forms.Timer timer5;
+        public System.Windows.Forms.Timer timer6;
+        public System.Windows.Forms.Timer timer7;
 
         public Controller()
         {
@@ -33,10 +38,17 @@ namespace WSJTX_Controller
             timer1.Tick += new System.EventHandler(timer1_Tick);
             timer2 = new System.Windows.Forms.Timer();
             timer2.Tick += new System.EventHandler(timer2_Tick);
+            timer3 = new System.Windows.Forms.Timer();
+            timer3.Interval = 5000;
+            timer3.Tick += new System.EventHandler(timer3_Tick);
             timer4 = new System.Windows.Forms.Timer();
             timer4.Tick += new System.EventHandler(timer4_Tick);
             timer5 = new System.Windows.Forms.Timer();
             timer5.Tick += new System.EventHandler(timer5_Tick);
+            timer6 = new System.Windows.Forms.Timer();
+            timer6.Tick += new System.EventHandler(timer6_Tick);
+            timer7 = new System.Windows.Forms.Timer();
+            timer7.Tick += new System.EventHandler(timer7_Tick);
         }
 
         [DllImport("Kernel32.dll")]
@@ -116,17 +128,25 @@ namespace WSJTX_Controller
                 alertTextBox.ForeColor = System.Drawing.Color.Black;
             }
 
-
             timer1.Interval = 10;           //actual is 11-12 msec (due to OS limitations)
             timer1.Start();
 
-            if (wsjtxClient.advanced) advButton_Click(null, null);
-            updateDebug();
+            if (!wsjtxClient.advanced)
+            {
+                timer6.Interval = 3000;
+                timer6.Start();
+            }
+            else
+            {
+                advButton_Click(null, null);
+            }
+            UpdateDebug();
             ResumeLayout();
             formLoaded = true;
             timer4.Interval = 60000;           //pop up dialog showing UDP settings at tick
             timer4.Start();
         }
+
         private void Controller_FormClosing(object sender, FormClosingEventArgs e)
         {
             Properties.Settings.Default.debug = wsjtxClient.debug;
@@ -163,8 +183,10 @@ namespace WSJTX_Controller
         {
             if (timer1 != null) timer1.Stop();
             timer1 = null;
+            timer3.Stop();
             timer4.Stop();
             timer5.Stop();
+            timer6.Stop();
             wsjtxClient.Closing();
         }
 
@@ -187,16 +209,54 @@ namespace WSJTX_Controller
         {
             wsjtxClient.ProcessDecodes();
         }
+        private void timer3_Tick(object sender, EventArgs e)
+        {
+            timer3.Stop();
+            if (errDlg != null)
+            {
+                errDlg.Close();
+                errDlg = null;
+            }
+        }
 
         private void timer4_Tick(object sender, EventArgs e)
         {
+            BringToFront();
             wsjtxClient.ConnectionDialog();
         }
 
         private void timer5_Tick(object sender, EventArgs e)
         {
+            BringToFront();
             wsjtxClient.CmdCheckDialog();
         }
+
+        private void timer6_Tick(object sender, EventArgs e)
+        {
+            timer6.Stop();
+            BringToFront();
+            if (MessageBox.Show($"This program can be completely automatic, you don't need to do anything for continuous CQs and replies (except to 'Enable Tx' in WSJT-X).\n\nAfter you're familiar with the basic automatic operation, you might be interested in more options.\n\n(You'll have the choice to see these options later)\n\nDo you want to see more options now?", wsjtxClient.pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                advButton_Click(null, null);
+            }
+        }
+
+        private void timer7_Tick(object sender, EventArgs e)
+        {
+            timer7.Stop();
+            label5.ForeColor = Color.Black;
+            label13.ForeColor = Color.Black;
+            label10.ForeColor = Color.Black;
+            label20.ForeColor = Color.Black;
+            label21.ForeColor = Color.Black;
+            label8.ForeColor = Color.Black;
+            label19.ForeColor = Color.Black;
+            label12.ForeColor = Color.Black;
+            label4.ForeColor = Color.Black;
+            label17.ForeColor = Color.Black;
+            label14.ForeColor = Color.Black;
+        }
+
         private void timeoutNumUpDown_ValueChanged(object sender, EventArgs e)
         {
             if (timeoutNumUpDown.Value < WsjtxClient.minSkipCount)
@@ -215,23 +275,6 @@ namespace WSJTX_Controller
             if (!(wsjtxClient == null)) wsjtxClient.ShowTimeout();
         }
 
-        private void altClearButton_Click(object sender, EventArgs e)
-        {
-            wsjtxClient.ClearAltCallList();
-
-            Console.Clear();            //tempOnly
-        }
-
-        private void altListBox_DoubleClick(object sender, EventArgs e)
-        {
-            wsjtxClient.AltCallSelected((Control.ModifierKeys & Keys.Shift) == Keys.Shift);
-        }
-
-        private void altPauseButton_Click(object sender, EventArgs e)
-        {
-            wsjtxClient.AltPauseButtonToggeled();
-        }
-
         private void alertCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             alertTextBox.Enabled = alertCheckBox.Checked;
@@ -248,7 +291,6 @@ namespace WSJTX_Controller
         private void alertTextBox_Click(object sender, EventArgs e)
         {
         }
-
 
         private void directedTextBox_Click(object sender, EventArgs e)
         {
@@ -278,48 +320,33 @@ namespace WSJTX_Controller
         private void verLabel_DoubleClick(object sender, EventArgs e)
         {
             wsjtxClient.debug = !wsjtxClient.debug;
-            updateDebug();
+            UpdateDebug();
         }
 
-        private void updateDebug()
+        private void UpdateDebug()
         {
             if (wsjtxClient.debug)
             {
-                Height = this.MaximumSize.Height;
                 ShowWindow(GetConsoleWindow(), 5);
+                Height = this.MaximumSize.Height;
+                FormBorderStyle = FormBorderStyle.Fixed3D;
+                wsjtxClient.UpdateDebug();
+                BringToFront();
             }
             else
             {
                 Height = this.MinimumSize.Height;
+                FormBorderStyle = FormBorderStyle.FixedSingle;
                 ShowWindow(GetConsoleWindow(), 0);
             }
         }
 
-        private void altListBox_Click(object sender, EventArgs e)
-        {
-            wsjtxClient.AltListBoxClicked();
-        }
-
         private void advButton_Click(object sender, EventArgs e)
         {
-            advTextBox1.Visible = false;
-            advTextBox2.Visible = false;
-            advButton.Visible = false;
-
-            label3.Visible = true;
-            label4.Visible = true;
-            altPauseButton.Visible = true;
-            altClearButton.Visible = true;
-            altListBox.Visible = true;
             alertCheckBox.Visible = true;
             alertTextBox.Visible = true;
             directedTextBox.Visible = true;
             directedCheckBox.Visible = true;
-            label3.Visible = true;
-            label4.Visible = true;
-            altPauseButton.Visible = true;
-            altClearButton.Visible = true;
-            altListBox.Visible = true;
             alertCheckBox.Visible = true;
             alertTextBox.Visible = true;
             directedTextBox.Visible = true;
@@ -327,6 +354,7 @@ namespace WSJTX_Controller
             logEarlyCheckBox.Visible = true;
             useRR73CheckBox.Visible = true;
             skipGridCheckBox.Visible = true;
+            addCallLabel.Visible = false;
 
             wsjtxClient.advanced = true;
         }
@@ -371,6 +399,90 @@ namespace WSJTX_Controller
         public void SetupDlgClosed()
         {
             setupDlg = null;
+        }
+
+        private void addCallLabel_Click(object sender, EventArgs e)
+        {
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"To add call signs to the reply list:{Environment.NewLine}- Press and hold the 'Alt' key, then{Environment.NewLine}- Double-click on that line in the 'Band Activity' list.{Environment.NewLine}{Environment.NewLine}Also try this:{Environment.NewLine}When you see a station others are calling to (like a rare DX!), to switch *immediately* to calling that station:{Environment.NewLine}- Press and hold the 'Ctrl' and 'Alt' keys, then{Environment.NewLine}- Double-click on any line in the 'Band Activity' list where that station is being called.{Environment.NewLine}{Environment.NewLine}Avoid double-clicking on calls in the 'Band Activity list *without* using the 'Alt' key:{Environment.NewLine}- This causes an immediate reply, instead of placing the call on a list of calls to reply to (which is partly the purpose of this program!)",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+        }
+
+        public void ShowMsg(string text, bool sound)
+        {
+            if (sound) SystemSounds.Beep.Play();
+            if (errDlg != null)
+            {
+                errDlg.Close();
+                errDlg = null;
+                timer3.Stop();
+            }
+            errDlg = new ErrorDlg();
+            Point p = Location;
+            int w = (Width - errDlg.Width) / 2;
+            p.Offset(w, 144);
+            errDlg.Location = p;
+            errDlg.textBox.Text = text;
+            errDlg.Show();
+            timer3.Start();
+        }
+
+        private void label24_Click(object sender, EventArgs e)
+        {
+            //help for setting directed CQs
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"To send directed CQs:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}- Enter an asterisk (^) for an ordinary non-directed CQ.{Environment.NewLine}- The directed CQs will be used in random order.{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}Example: EU DX *",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+        }
+
+        private void label25_Click(object sender, EventArgs e)
+        {
+            //help for warning for specific directed CQs
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"To hear a notification when specific directed CQs appear in the 'Band Activity' list:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+        }
+
+        private void label26_Click(object sender, EventArgs e)
+        {
+            //help for early logging
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"To maximize the chance of completed QSOs, consider 'early logging':{Environment.NewLine}{Environment.NewLine}The defining requirement for any QSO is the exchange of call signs and signal reports.{Environment.NewLine}Once either party sends an 'RRR' message, those requirements have been met... a '73' is not necessary for logging the QSO.{Environment.NewLine}{Environment.NewLine}Note that the QSO will continue after early logging, completing when 'RR73' or '73' is sent, or '73' is received.",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+        }
+
+        private void verLabel2_Click(object sender, EventArgs e)
+        {
+            string command = "mailto:more.avantol@xoxy.net?subject=WSJTX-Controller";
+            System.Diagnostics.Process.Start(command);
         }
     }
 }

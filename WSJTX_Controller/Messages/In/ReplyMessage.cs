@@ -56,7 +56,7 @@ namespace WsjtxUdpLib.Messages
         public int DeltaFrequency { get; set; }
         public string Mode { get; set; }
         public string Message { get; set; }
-        public bool LowConfidence { get; set; }
+        public bool UseStdReply { get; set; }
         public byte Modifiers { get; set; }
 
         /*public override string ToString()
@@ -68,7 +68,7 @@ namespace WsjtxUdpLib.Messages
             sb.Append($"{Col(DeltaFrequency, 4, Align.Right)} ");
             sb.Append($"{Col(DeltaTime, 4, Align.Right)} ");
             sb.Append($"{Col(Mode, 1, Align.Left)} ");
-            sb.Append($"{(LowConfidence ? "LC" : "  ")} ");
+            sb.Append($"{(UseStdReply ? "USR" : "  ")} ");
             sb.Append($"{Col(Message, 20, Align.Left)} ");
 
             return sb.ToString();
@@ -89,7 +89,7 @@ namespace WsjtxUdpLib.Messages
                     writer.Write(EncodeQUInt32((UInt32)DeltaFrequency));
                     writer.Write(EncodeString(Mode));
                     writer.Write(EncodeString(Message));
-                    writer.Write(EncodeBoolean(LowConfidence));
+                    writer.Write(EncodeBoolean(UseStdReply));
                     writer.Write(Modifiers);
                }
                 return m.ToArray();

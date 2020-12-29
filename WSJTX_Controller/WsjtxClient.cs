@@ -1,20 +1,21 @@
 ﻿//NOTE CAREFULLY: Several message classes require the use of a slightly modified WSJT-X program.
 //Further information is in the README file.
 
-using WsjtxUdpLib.Messages;
-using WsjtxUdpLib.Messages.Out;
 using System;
-using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
 //using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
+using WsjtxUdpLib.Messages;
+using WsjtxUdpLib.Messages.Out;
+using System.Drawing;
 
 namespace WSJTX_Controller
 {
@@ -33,7 +34,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/215", "2.3.0-rc2/100", "2.3.0-rc2/101", "2.3.0-rc2/102", "2.3.0-rc2/103", "2.3.0-rc2/104", "2.3.0-rc2/105" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/230", "2.3.0-rc2/104", "2.3.0-rc2/105" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         private bool logToFile = false;
@@ -45,28 +46,30 @@ namespace WSJTX_Controller
         private string myCall = null, myGrid = null;
         private Dictionary<string, DecodeMessage> callDict = new Dictionary<string, DecodeMessage>();
         private Queue<string> callQueue = new Queue<string>();
-        private List<string> altCallList = new List<string>();
-        private Dictionary<string, DecodeMessage> altCallDict = new Dictionary<string, DecodeMessage>();
         private List<string> reportList = new List<string>();
-        private List<string> rogerReportList = new List<string>();
         private List<string> configList = new List<string>();
+        private Dictionary<string, List<DecodeMessage>> allCallDict = new Dictionary<string, List<DecodeMessage>>();
         private bool txEnabled = false;
         private bool transmitting = false;
         private bool autoCalling = true;
         private bool decoding = false;
         private bool qsoLogged = false;
         private WsjtxMessage.QsoStates qsoState = WsjtxMessage.QsoStates.CALLING;
-        private string deCall = "";
         private string mode = "";
         private bool modeSupported = true;
         private bool? lastModeSupported = null;
         private string rawMode = "";
         private bool txFirst = false;
-        private bool cQonly = false;
+        private bool dblClk = false;
         private int? trPeriod = null;       //msec
-        private string replyCmd = null;     //no "reply to" cmd sent to WSJT-X yet
+        private ulong dialFrequency = 0;
+        private UInt32 txOffset = 0;
+        private string replyCmd = null;     //no "reply to" cmd sent to WSJT-X yet, will not be a CQ
+        private string curCmd = null;       //cmd last issed, can be CQ
         private DecodeMessage replyDecode = null;
         private string configuration = null;
+        private TimeSpan latestDecodeTime;
+        private string callInProg = null;
 
         private WsjtxMessage.QsoStates lastQsoState = WsjtxMessage.QsoStates.INVALID;
         private UdpClient udpClient2;
@@ -81,11 +84,19 @@ namespace WSJTX_Controller
         private int? lastSpecOp = null;
         private string lastTxMsg = null;
         private bool? lastTxEnabled = null;
+        private string lastCallInProg = null;
+        private bool? lastAutoCalling = null;
+        private bool? lastTxTimeout = null;
+        private string lastReplyCmd = null;
+        private string lastCurCmd = null;
+        private WsjtxMessage.QsoStates lastQsoStateDebug = WsjtxMessage.QsoStates.INVALID;
+        private string lastDxCallDebug = null;
 
         private string lastDxCall = null;
         private string lastStatus = null;
         private int xmitCycleCount = 0;
         private bool txTimeout = false;
+        private bool newDirCq = false;
         private int specOp = 0;
         private string qCall = null;            //call sign for last QSO logged
         private string tCall = null;            //call sign being processed at timeout
@@ -107,10 +118,9 @@ namespace WSJTX_Controller
         private WsjtxMessage msg = new UnknownMessage();
         private string errorDesc = null;
         private Random rnd = new Random();
-        TimeSpan latestDecodeTime;
         DateTime firstDecodeTime;
-        private bool firstDecodeInPeriod = true;
         private const string spacer = "           *";
+        private string WsjtxLogPathFilename = $"{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)}\\WSJT-X\\wsjtx_log.adi";
 
         private struct UdpState
         {
@@ -201,15 +211,13 @@ namespace WSJTX_Controller
             ShowStatus();
             ShowQueue();
             ShowLogged();
-            UpdateAltCallListStatus();
             messageRecd = false;
             recvStarted = false;
 
-            ctrl.altListBox.DataSource = altCallList;
-
-            string cast = multicast ? "(multicast)" : "(unicast)";
+             string cast = multicast ? "(multicast)" : "(unicast)";
             ctrl.verLabel.Text = $"by WM8Q v{fileVer}";
-            ctrl.verLabel2.Text = $"More features? more.avantol@xoxy.net";
+            ctrl.verLabel2.Text = "more.avantol@xoxy.net";
+            ctrl.verLabel3.Text = "More features?";
 
             ctrl.alertTextBox.Enabled = false;
             ctrl.directedTextBox.Enabled = false;
@@ -318,6 +326,7 @@ namespace WSJTX_Controller
                     MessageBox.Show($"WSJT-X v{imsg.Version}/{imsg.Revision} is not supported.\n\nSupported WSJT-X version(s):\n{AcceptableVersionsString()}\n\nYou can check the WSJT-X version/build by selecting 'Help | About' in WSJT-X.\n\n{pgmName} will try again when you close this dialog.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     ResetNego();
                     suspendComm = false;
+                    UpdateDebug();
                     return;
                 }
                 else
@@ -349,7 +358,6 @@ namespace WSJTX_Controller
             //go from SENT to RECD state
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.SENT && msg.GetType().Name == "HeartbeatMessage")
             {
-
                 HeartbeatMessage hmsg = (HeartbeatMessage)msg;
                 DebugOutput($"{Time()}\n{hmsg}");
                 WsjtxMessage.NegotiatedSchemaVersion = hmsg.SchemaVersion;
@@ -384,11 +392,21 @@ namespace WSJTX_Controller
             {
                 StatusMessage smsg = (StatusMessage)msg;
                 //DebugOutput($"\n{Time()}\n{smsg}");
+                txEnabled = smsg.TxEnabled;
+                if (lastTxEnabled == null) lastTxEnabled = smsg.TxEnabled;
+                if (smsg.DblClk || (txEnabled != lastTxEnabled && txEnabled)) ctrl.ShowMsg("Not ready yet... please wait", true);
+                lastTxEnabled = txEnabled;
                 mode = smsg.Mode;
                 specOp = (int)smsg.SpecialOperationMode;
                 configuration = smsg.ConfigurationName.Trim(). Replace(' ', '-');
                 if (!CheckMyCall(smsg)) return;
                 DebugOutput($"{Time()}\nStatus     myCall:'{myCall}' myGrid:'{myGrid}' mode:{mode} specOp:{specOp} configuration:{configuration} check:{smsg.Check}");
+                UpdateDebug();
+            }
+
+            if (WsjtxMessage.NegoState != WsjtxMessage.NegoStates.RECD && msg.GetType().Name == "EnqueueDecodeMessage")
+            {
+                ctrl.ShowMsg("Not ready yet... please wait", true);
             }
 
             //************
@@ -431,27 +449,16 @@ namespace WSJTX_Controller
                     if (msg.GetType().Name == "DecodeMessage" && myCall != null)
                     {
                         DecodeMessage dmsg = (DecodeMessage)msg;
+                        latestDecodeTime = dmsg.SinceMidnight;
                         rawMode = dmsg.Mode;    //different from mode string in status msg
                         if (dmsg.New)           //important to reject replays requested by other pgms
                         { 
                             if (dmsg.IsCallTo(myCall)) DebugOutput($"{dmsg}\n           *msg:'{dmsg.Message}'");
 
-                            deCall = dmsg.DeCall();
+                            string deCall = dmsg.DeCall();
                             //do some processing not directly related to replying immediately
                             if (deCall != null)
                             {
-                                //add the decodes having the opposite time from the Tx 1st checkbox in WSJT-X
-                                if (((dmsg.SinceMidnight.Seconds % (trPeriod / 500)) == 0) != txFirst)
-                                {
-                                    if (firstDecodeInPeriod) AddAltCallSeparator();
-                                    firstDecodeInPeriod = false;
-                                    AddAltCall(dmsg);
-                                }
-                                else
-                                {
-                                    firstDecodeInPeriod = true;
-                                }
-                                    
                                 //check for directed CQ
                                 if (ctrl.alertCheckBox.Checked)
                                 {
@@ -461,14 +468,27 @@ namespace WSJTX_Controller
                                 }
 
                                 //check for decode being a call to myCall
-                                if (deCall != qCall && myCall != null && dmsg.IsCallTo(myCall) && ctrl.mycallCheckBox.Checked) Play("trumpet.wav");   //not the call just logged
+                                if  (myCall != null && dmsg.IsCallTo(myCall))
+                                {
+                                    UpdateDebug();
+                                    if (deCall != qCall && ctrl.mycallCheckBox.Checked) Play("trumpet.wav");   //not the call just logged
+
+                                    //if call not logged: save Report (...+03) and RogerReport (...-02) decodes for out-of-order call processing
+                                    if (!logList.Contains(deCall) && WsjtxMessage.IsReport(dmsg.Message) || WsjtxMessage.IsRogerReport(dmsg.Message))
+                                    {
+                                        List<DecodeMessage> vlist;
+                                        //create new List for deCall if nothing entered yet into the Dictionary
+                                        if (!allCallDict.TryGetValue(deCall, out vlist)) allCallDict.Add(deCall, vlist = new List<DecodeMessage>());
+                                        vlist.Add(dmsg);        //messages from deCall are in order rec's, will be duplicate message types
+                                    }
+                                    CheckLateLog(deCall, dmsg);
+                                }
                             }
 
                             //decode processing of calls to myCall requires txEnabled
                             if (txEnabled && deCall != null && myCall != null && dmsg.IsCallTo(myCall))
                             {
-                                DebugOutput($"{spacer}*'{deCall}' is to {myCall}");
-                                // not xmitting yet    
+                                DebugOutput($"{spacer}'{deCall}' is to {myCall}");
                                 if (/*!transmitting*/ true)      //todo: can process decodes after Tx starts?
                                 {
                                     if (!dmsg.Is73orRR73())       //not a 73 or RR73
@@ -479,20 +499,20 @@ namespace WSJTX_Controller
                                             DebugOutput($"{spacer}'{deCall}' not already in queue");
                                             if (qsoState == WsjtxMessage.QsoStates.CALLING && callQueue.Count == 0)
                                             {
-                                                if (deCall != CallInProgress())                //call currently being processed by WSJT-X
+                                                //"Call 1st" never in effect, so set up to reply to this call
+                                                if (autoCalling && deCall != callInProg)                //this call or another call currently being processed by WSJT-X
                                                 {
-                                                    DebugOutput($"{spacer}callQueue empty, adding '{deCall}', not currently being processed");
+                                                    DebugOutput($"{spacer}callQueue empty, autoCalling:{autoCalling}, adding '{deCall}', not currently being processed");
                                                     AddCall(deCall, dmsg);
                                                     txTimeout = true;
-                                                    tCall = null;                       //prevent call removal from queue
-                                                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}'");
+                                                    callInProg = null;
+                                                    DebugOutput($"{spacer}qsoState:{qsoState} txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
                                                 }
                                             }
                                             else   //not CALLING or call queue has entries
                                             {
-                                                DebugOutput($"{spacer}calls queued or not CALLING (is {qsoState})");
-                                                DebugOutput($"{spacer}last Tx 'to':({WsjtxMessage.ToCall(txMsg)}), last cmd 'from':({WsjtxMessage.DeCall(replyCmd)})");
-                                                if (deCall == CallInProgress())                //call currently being processed by WSJT-X
+                                                DebugOutput($"{spacer}calls queued or not CALLING, qsoState:{qsoState})");
+                                                if (deCall == callInProg)                //call currently being processed by WSJT-X
                                                 {
                                                     DebugOutput($"{spacer}'{deCall}' currently being processed");
                                                 }
@@ -506,7 +526,7 @@ namespace WSJTX_Controller
                                         else       //call is already in queue, possibly update the call data
                                         {
                                             DebugOutput($"{spacer}'{deCall}' already in queue");
-                                            if (deCall == CallInProgress())                //call currently being processed by WSJT-X
+                                            if (deCall == callInProg)                //call currently being processed by WSJT-X
                                             {
                                                 DebugOutput($"{spacer}'{deCall}' currently being processed");
                                                 RemoveCall(deCall);             //may have been queued previously
@@ -520,27 +540,28 @@ namespace WSJTX_Controller
                                     }
                                     else        //decode is 73 or RR73 msg
                                     {
-                                        DebugOutput($"{spacer}decode is 73 or RR73 msg, tCall:'{tCall}', cur Tx to:'{WsjtxMessage.DeCall(txMsg)}' cur Tx IsRogers:{WsjtxMessage.IsRogers(txMsg)}");
-                                        /* to-do: need to set up WSJT-X with valid QSO data first
-                                        //check for last-chance logging (73 after current QSO just ended)
-                                        //  was not logged early at RRR sent  same call timed out  prev Tx msg was to myCall           prev Tx msg was a RRR
-                                        if (!ctrl.logEarlyCheckBox.Checked && tCall == deCall && WsjtxMessage.ToCall(lastTxMsg) == deCall && WsjtxMessage.IsRogers(lastTxMsg))       //this decode is a late 73, log it
-                                        {
-                                            DebugOutput($"{spacer}'{deCall}' timed out, prev Tx msg was to '{myCall}', current Tx msg was a RRR");     //tempOnly
-                                            DebugOutput($"{Time()} Logging late 73 msg");
-                                            LogQso(deCall);
-                                        }
-                                        */
+                                        DebugOutput($"{spacer}decode is 73 or RR73");
                                     }
                                 }
                                 //else
                                 //{
                                 //    DebugOutput($"{spacer}discarded decode, already transmitting");
                                 //}
+                                UpdateDebug();
                             }
-                            UpdateDebug();
                         }
                         return;
+                    }
+
+                    //EnqueueDecodeMessage
+                    //*************
+                    if (msg.GetType().Name == "EnqueueDecodeMessage" && myCall != null)
+                    {
+
+                        EnqueueDecodeMessage emsg = (EnqueueDecodeMessage)msg;
+                        AddSelectedCall(emsg);
+                        DebugOutput($"{Time()} AddSelectedCall\n{emsg}");
+                        UpdateDebug();
                     }
 
                     //****************
@@ -556,7 +577,9 @@ namespace WSJTX_Controller
                         if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
                         logList.Add(qCall);    //even if already logged this mode/band
                         ShowLogged();
-                        DebugOutput($"{Time()} QSO logging ackd: qCall{qCall}");
+                        ctrl.ShowMsg($"Logging QSO with {qCall}", false);
+                        DebugOutput($"{Time()} QSO logging ackd: qCall'{qCall}'");
+                        RemoveAllCall(qCall);
                         UpdateDebug();
 
                         //check for call sign in queue/dictionary,
@@ -573,17 +596,20 @@ namespace WSJTX_Controller
                 if (msg.GetType().Name == "StatusMessage")
                 {
                     StatusMessage smsg = (StatusMessage)msg;
+                    DateTime dtNow = DateTime.Now;
                     //DebugOutput($"\n{Time()}\n{smsg}");                        
                     qsoState = smsg.CurQsoState();
                     txEnabled = smsg.TxEnabled;
                     dxCall = smsg.DxCall;                               //unreliable info, can be edited manually
                     mode = smsg.Mode;
                     specOp = (int)smsg.SpecialOperationMode;
-                    txMsg = smsg.LastTxMsg;        //msg from last Tx
+                    txMsg = WsjtxMessage.RemoveAngleBrackets(smsg.LastTxMsg);        //msg from last Tx
                     txFirst = smsg.TxFirst;
-                    cQonly = smsg.CqOnly;
                     decoding = smsg.Decoding;
                     transmitting = smsg.Transmitting;
+                    dialFrequency = smsg.DialFrequency;
+                    txOffset = smsg.TxDF;
+                    dblClk = smsg.DblClk;           //event, not state
 
                     if (lastXmitting == null) lastXmitting = transmitting;     //initialize
                     if (lastQsoState == WsjtxMessage.QsoStates.INVALID) lastQsoState = qsoState;    //initialize WSJT-X user QSO state change detection
@@ -596,14 +622,6 @@ namespace WSJTX_Controller
                     if (lastSpecOp == null) lastSpecOp = (int)smsg.SpecialOperationMode; //initialize
                     if (lastTxMsg == null) lastTxMsg = txMsg;   //initialize
                     if (smsg.TRPeriod != null) trPeriod = (int)smsg.TRPeriod;
-
-                    //minimize console clutter
-                    string curStatus = $"Status     myCall:'{myCall}' myGrid:'{myGrid}' qsoState:{qsoState} txMsg:'{txMsg}' replyCmd:'{replyCmd}' \n           txTimeout:{txTimeout} Transmitting:{transmitting} Mode:{mode} txEnabled:{txEnabled}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} check:{smsg.Check}";
-                    if (curStatus != lastStatus)
-                    {
-                        DebugOutput($"{Time()}\n{curStatus}");
-                        lastStatus = curStatus;
-                    }
 
                     if (ctrl.timer5.Enabled && smsg.Check == cmdCheck)             //found the random cmd check string, cmd receive ack'd
                     {
@@ -630,6 +648,34 @@ namespace WSJTX_Controller
                         lastXmitting = transmitting;
                         ShowStatus();
                     }
+
+                    //check for manual operation started
+                    if (dblClk)             //event, not state: double-clicked on list of calls, WSJT-X will start calling immediately
+                    {
+                        if (callQueue.Count == 0 || callQueue.Peek() != dxCall)         //selected call is not the one to be dequeued next
+                        {
+                            if (autoCalling)                //only cancel timeout the first time manual operation detected
+                            {
+                                txTimeout = false;          //cancel timeout or settings change, which would start auto CQing
+                                if (txFirst == IsEvenPeriod((dtNow.Second * 1000) + dtNow.Millisecond))
+                                {
+                                    xmitCycleCount = -1;         //Tx enabled during the same period Tx will happen, add one more tx cycle before timeout
+                                }
+                                else
+                                {
+                                    xmitCycleCount = 0;         //restart timeout for the new call
+                                }
+                                replyCmd = null;            //last reply cmd sent is no longer in effect
+                                replyDecode = null;
+                                if (debug) Console.Beep();
+                                ShowStatus();
+                                UpdateDebug();
+                                DebugOutput($"{spacer}new DX call selected manually during Rx: txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} replyCmd:'{replyCmd}' autoCalling:{autoCalling}");
+                            }
+                        }
+                        autoCalling = false;
+                    }
+                    if (!autoCalling) callInProg = dxCall;            //dxCall may be set later than dblClk
 
                     //detect WSJT-X mode change
                     if (mode != lastMode)
@@ -665,7 +711,6 @@ namespace WSJTX_Controller
                     {
                         opMode = OpModes.START;
                         ShowStatus();
-                        ClearAltCallList();
                         UpdateDebug();
                         DebugOutput($"{Time()} opMode:{opMode}");
                     }
@@ -696,13 +741,13 @@ namespace WSJTX_Controller
                     {
                         DebugOutput($"{Time()} txEnabled:{txEnabled} (was {lastTxEnabled})");
                         if (!txEnabled) ctrl.timer2.Stop();       //no xmit cycle now
-                        if (txEnabled && altCallList.Count > 0 /*&& WsjtxMessage.IsCQ(txMsg)*/ && qsoState == WsjtxMessage.QsoStates.CALLING)
+
+                        if (txEnabled && callQueue.Count > 0 && qsoState == WsjtxMessage.QsoStates.CALLING)
                         {
                             DebugOutput($"{Time()} Tx enabled: starting queue processing");
                             txTimeout = true;                   //triggers next in queue
                             tCall = null;                       //prevent call removal from queue
                             DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}'");
-                            DateTime dtNow = DateTime.Now;
                             if (txFirst == IsEvenPeriod((dtNow.Second * 1000) + dtNow.Millisecond))
                             {
                                 xmitCycleCount = -1;        //Tx enabled during the same period Tx will happen, add one more tx cycle before timeout
@@ -742,7 +787,7 @@ namespace WSJTX_Controller
                         lastTxWatchdog = smsg.TxWatchdog;
                     }
 
-                    if (lastDialFrequency != null && (Math.Abs((Int64)lastDialFrequency - (Int64)smsg.DialFrequency) > 500000))
+                    if (lastDialFrequency != null && (Math.Abs((Int64)lastDialFrequency - (Int64)dialFrequency) > 500000))
                     {
                         ClearCalls();
                         logList.Clear();            //can re-log on new band
@@ -758,6 +803,16 @@ namespace WSJTX_Controller
                         lastTxFirst = txFirst;
                     }
 
+                    //*****end of status determination here*****
+                    //show current status, minimize console clutter
+                    string curStatus = $"Status     myCall:'{myCall}' myGrid:'{myGrid}' callInProg:'{callInProg}' qsoState:{qsoState} txMsg:'{txMsg}' replyCmd:'{replyCmd}' \n           txTimeout:{txTimeout} Transmitting:{transmitting} Mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} check:{smsg.Check} dblClk:{dblClk}";
+                    if (curStatus != lastStatus)
+                    {
+                        DebugOutput($"{Time()}\n{curStatus}");
+                        lastStatus = curStatus;
+                    }
+                    //status-related action(s) follow
+
                     //check for setup for CQ
                     if (commConfirmed && myCall != null && supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.START)
                     {
@@ -765,7 +820,7 @@ namespace WSJTX_Controller
                         UpdateDebug();
                         DebugOutput($"{Time()} opMode:{opMode}");
                         ShowStatus();
-                        ClearAltCallList();
+                        UpdateAddCall();
                         //string curStatus = $"Status    qsoState:{qsoState} lastTxMsg:{smsg.LastTxMsg} txEnabled:{txEnabled} txMsg:'{txMsg}' txTimeout:{txTimeout} transmitting:{transmitting} mode:{mode}";
                         //DebugOutput(curStatus);
                         //setup for CQ
@@ -778,8 +833,9 @@ namespace WSJTX_Controller
                         udpClient2.Send(ba, ba.Length);
                         DebugOutput($"{Time()} >>>>>Sent 'Setup CQ' cmd:6 cmdCheck:{cmdCheck}\n{emsg}");
                         qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
-                        DebugOutput($"{Time()} qsoState:{qsoState} (was {lastQsoState})");
-                        lastQsoState = qsoState;
+                        callInProg = null;
+                        DebugOutput($"{spacer}qsoState:{qsoState} (was {lastQsoState}) callInProg:'{callInProg}'");
+                        curCmd = emsg.GenMsg;
                     }
                     UpdateDebug();
                     return;
@@ -818,6 +874,7 @@ namespace WSJTX_Controller
                 }
                 DebugOutput($"{Time()} myCall:{myCall} myGrid:{myGrid}");
             }
+            UpdateDebug();
             return true;
         }
         private void CheckNextXmit()
@@ -830,10 +887,10 @@ namespace WSJTX_Controller
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
                 replyDecode = null;
-                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:'{tCall}'");
+                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:'{tCall}' newDirCq:{newDirCq}");
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
-                if (tCall != null)     //null if call added manually, and must be processed below
+                if (tCall != null)     //null if call added manually, and must be processed here
                 {
                     DebugOutput($"{spacer}'{tCall}' might be in process but timed out");
                     RemoveCall(tCall);
@@ -846,7 +903,7 @@ namespace WSJTX_Controller
                 {
                     DecodeMessage dmsg = new DecodeMessage();
                     string nCall = GetNextCall(out dmsg);
-                    DebugOutput($"{spacer}Have entries in queue, got {nCall}"); 
+                    DebugOutput($"{spacer}Have entries in queue, got '{nCall}'"); 
 
                     //set WSJT-X call enable with Reply message
                     var rmsg = new ReplyMessage();
@@ -858,11 +915,13 @@ namespace WSJTX_Controller
                     rmsg.DeltaFrequency = dmsg.DeltaFrequency;
                     rmsg.Mode = dmsg.Mode;
                     rmsg.Message = dmsg.Message;
-                    rmsg.LowConfidence = dmsg.LowConfidence;
+                    rmsg.UseStdReply = dmsg.UseStdReply;
                     ba = rmsg.GetBytes();
                     udpClient2.Send(ba, ba.Length);
                     replyCmd = dmsg.Message;            //save the last reply cmd to determine which call is in progress
-                    replyDecode = dmsg;                 //save the decode the reply cmd came from
+                    replyDecode = dmsg;                 //save the decode the reply cmd derived from
+                    curCmd = dmsg.Message;
+                    callInProg = nCall;
                     DebugOutput($"{Time()} >>>>>Sent 'Reply To Msg' cmd:\n{rmsg} lastTxMsg:'{lastTxMsg}'\nreplyCmd:'{replyCmd}'");
                 }
                 else            //no queued call signs, start CQing
@@ -879,35 +938,54 @@ namespace WSJTX_Controller
                     qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
                     replyCmd = null;        //invalidate last reply cmd since not replying
                     replyDecode = null;
-                    DebugOutput($"{Time()} qsoState:{qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
-                    lastQsoState = qsoState;
+                    curCmd = emsg.GenMsg;
+                    callInProg = null;
+                    DebugOutput($"{spacer}qsoState:{qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
+                    newDirCq = false;           //if set, was processed here
                 }
                 txTimeout = false;              //ready for next timeout
-                qsoLogged = false;              //clear "logged" status display
+                qsoLogged = false;              //clear "logged" status
                 autoCalling = true;
-                DebugOutput($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
-                ShowStatus();
+                DebugOutput($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} qsoLogged:{qsoLogged} newDirCq:{newDirCq} autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                UpdateDebug();      //unconditional
+                return;             //don't process newDirCq
             }
-            UpdateDebug();
+
+            //************************************
+            //Directed CQ / new setting processing
+            //************************************
+            if (qsoState == WsjtxMessage.QsoStates.CALLING && newDirCq)
+            {
+                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:'{tCall}' newDirCq:{newDirCq}");
+                DebugOutput($"{spacer}New directed CQ, qsoState:{qsoState}, start CQing");
+                emsg.NewTxMsgIdx = 6;
+                emsg.GenMsg = $"CQ{NextDirCq()} {myCall} {myGrid}";
+                emsg.SkipGrid = ctrl.skipGridCheckBox.Checked;
+                emsg.UseRR73 = ctrl.useRR73CheckBox.Checked;
+                emsg.CmdCheck = cmdCheck;
+                ba = emsg.GetBytes();           //set up for CQ, auto, call 1st
+                udpClient2.Send(ba, ba.Length);
+                DebugOutput($"{Time()} >>>>>Sent 'Setup CQ' cmd:6 cmdCheck:{cmdCheck}\n{emsg}");
+                qsoState = WsjtxMessage.QsoStates.CALLING;      //in case enqueueing call manually right now
+                replyCmd = null;        //invalidate last reply cmd since not replying
+                replyDecode = null;
+                curCmd = emsg.GenMsg;
+                newDirCq = false;
+                callInProg = null;
+                DebugOutput($"{spacer}qsoState:{qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
+                DebugOutput($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} qsoLogged:{qsoLogged} newDirCq:{newDirCq} autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                UpdateDebug();      //unconditional
+                return;
+            }
         }
 
         public void ProcessDecodes()
         {
             ctrl.timer2.Stop();
-            string toCall = WsjtxMessage.ToCall(txMsg);
-            DebugOutput($"\n{Time()} Timer2 tick: txEnabled:{txEnabled} txTimeout:{txTimeout} dxCall:'{dxCall}' lastDxCall:'{lastDxCall}' txMsg:'{txMsg}' toCall:'{toCall}'");
-            if (dxCall != null && toCall != "CQ" && toCall != null && dxCall != toCall)
-            {
-                txTimeout = false;          //cancel timeout or settings change, which would continue CQing
-                xmitCycleCount = 0;         //restart timeout for the new call
-                replyCmd = null;            //last reply cmd sent is no longer in effect
-                replyDecode = null;
-                autoCalling = false;
-                ShowStatus();
-                DebugOutput($"{spacer}new DX call selected manually during Rx: txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} replyCmd:'{replyCmd}' autoCalling:{autoCalling}");
-            }
+            DebugOutput($"\n{Time()} ProcessDecodes: txEnabled:{txEnabled} txTimeout:{txTimeout} dxCall:'{dxCall}' lastDxCall:'{lastDxCall}' txMsg:'{txMsg}'\n           replyCmd:'{replyCmd}' curCmd:'{curCmd}' dblClk:{dblClk}");
+            //check for Tx started manually during Rx
             if (txEnabled) CheckNextXmit();
-            DebugOutput($"{Time()} Timer2 tick done\n");
+            DebugOutput($"{Time()} ProcessDecodes done\n");
         }
 
         //check for time to log (best done at Tx start to avoid any logging/dequeueing timing problem if done at Tx end)
@@ -915,29 +993,15 @@ namespace WSJTX_Controller
         {
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
-            DebugOutput($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}'\n           replyCmd:'{replyCmd}' qsoLogged:{qsoLogged}");
-            //check for WSJT-X ready to respond to a 73/RR73 that is not from the last Tx 'to'
-            // msg to be sent is 73               msg to be sent 'to'      is not  replyCmd 'from' (i.e.: WSJT-X ignored last reply cmd)
-            if (WsjtxMessage.Is73orRR73(txMsg) && replyCmd != null && WsjtxMessage.ToCall(txMsg) != null 
-                && WsjtxMessage.DeCall(replyCmd) != null && WsjtxMessage.ToCall(txMsg) != WsjtxMessage.DeCall(replyCmd))
-            {
-                //log the unexpected call sign
-                LogQso(WsjtxMessage.ToCall(txMsg));
-                qsoLogged = true;
-                ShowStatus();
-                DebugOutput($"{spacer}unexpected logging reqd: toCall:{WsjtxMessage.ToCall(txMsg)} qsoLogged:{qsoLogged}");
-                //put the call sign previously in-progress back in the call queue
-                AddCall(replyCmd, replyDecode);
-            }
-
+            callInProg = null;
+            if (toCall != "CQ") callInProg = toCall;
+            DebugOutput($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}' callInProg:'{callInProg}'\n           replyCmd:'{replyCmd}' qsoLogged:{qsoLogged} autoCalling:{autoCalling}");
 
             //check for time to log early
             //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
             if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
             {
                 LogQso(toCall);
-                qsoLogged = true;
-                ShowStatus();
                 DebugOutput($"{spacer}early logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
             }
 
@@ -949,42 +1013,44 @@ namespace WSJTX_Controller
                 if (!qsoLogged)
                 {
                     LogQso(toCall);
-                    qsoLogged = true;
-                    ShowStatus();
                     DebugOutput($"{spacer}normal logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
                 }
             }
-            DebugOutput($"{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}' qsoLogged:{qsoLogged}\n");
+            DebugOutput($"{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}'\n           qsoLogged:{qsoLogged}\n");
+            UpdateDebug();      //unconditional
         }
 
         //check for QSO end or timeout (and possibly logging (if txMsg changed between TX start and Tx end)
         private void ProcessTxEnd()
         {
-            firstDecodeInPeriod = true;
             lastDxCall = dxCall;            //save dxCall from start of Rx phase
             string toCall = WsjtxMessage.ToCall(txMsg);
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
             string deCall = WsjtxMessage.DeCall(replyCmd);
-            DebugOutput($"\n{Time()} Tx end: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall:'{tCall}'\n           toCall:'{toCall}' lastToCall:'{lastToCall}' replyCmd:'{replyCmd}' deCall:'{deCall}' qsoLogged:{qsoLogged}");
+            string cmdToCall = WsjtxMessage.ToCall(curCmd);
 
-            //check for WSJT-X processing a call other than last cmd
-            if (txMsg != null && ((replyCmd == null && !WsjtxMessage.IsCQ(txMsg) && lastTxMsg != txMsg) || (replyCmd != null && toCall != deCall)))
+            DebugOutput($"\n{Time()} Tx end: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall:'{tCall}' callInProg:'{callInProg}' autoCalling:{autoCalling}\n           toCall:'{toCall}' lastToCall:'{lastToCall}' replyCmd:'{replyCmd}' deCall:'{deCall}' qsoLogged:{qsoLogged}\n           curCmd:{curCmd} cmdToCall:'{cmdToCall}'");
+            //could have clicked on "CQ" button in WSJT-X
+            if (toCall == "CQ")
             {
-                replyCmd = null;        //last reply cmd sent is no longer in effect
-                replyDecode = null;
-                xmitCycleCount = 0;     //stop any timeout, since new call
-                autoCalling = false;
-                ShowStatus();
-                DebugOutput($"{spacer}Call selected manually during Tx: invalidated replyCmd:'{replyCmd}' reset xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} autoCalling:{autoCalling}");
+                autoCalling = true;
+                callInProg = null;
+                DebugOutput($"{spacer}Possible CQ button, callInProg:'{callInProg}' autoCalling:{autoCalling}");
             }
+                else
+            {
+                callInProg = toCall;
+                DebugOutput($"{spacer}callInProg:'{callInProg}'");
+            }
+
+            //save all calls a report msg was sent to
+            if ((WsjtxMessage.IsReport(txMsg) || WsjtxMessage.IsRogerReport(txMsg)) && !reportList.Contains(toCall)) reportList.Add(toCall);
 
             //check for time to log early; NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
             //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
             if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
             {
                 LogQso(toCall);
-                qsoLogged = true;
-                ShowStatus();
                 DebugOutput($"{spacer}early logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
             }
             //check for QSO complete, trigger next call in the queue
@@ -993,22 +1059,22 @@ namespace WSJTX_Controller
             {
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
-                DebugOutput($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}");
+                autoCalling = true;
+                callInProg = null;
+                DebugOutput($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged} autoCalling:{autoCalling} callInProg:'{callInProg}'");
                 //NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
                 if (!qsoLogged)
                 {
                     LogQso(toCall);
-                    qsoLogged = true;
-                    ShowStatus();
                     DebugOutput($"{spacer}normal logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
                 }
             }
 
-            //count tx cycles: check for changed "to" call in WSJT-X
+            //count tx cycles: check for changed Tx call in WSJT-X
             if (lastTxMsg != txMsg && xmitCycleCount >= 0)
             {
-                //"to" call has changed since last xmit end
-                if (callQueue.Contains(toCall))
+                //check  for "to" call changed since last xmit end
+                if (toCall != lastToCall && callQueue.Contains(toCall))
                 {
                     RemoveCall(toCall);         //manually switched to Txing a call that was also in the queue
                 }
@@ -1026,8 +1092,10 @@ namespace WSJTX_Controller
                     {
                         xmitCycleCount = 0;
                         txTimeout = true;
+                        autoCalling = true;
+                        callInProg = null;
                         tCall = WsjtxMessage.ToCall(lastTxMsg);        //will be null if non-std msg
-                        DebugOutput($"{Time()} Reset(3) (timeout) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} tCall:'{tCall}'");
+                        DebugOutput($"{Time()} Reset(3) (timeout) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} tCall:'{tCall}' autoCalling:{autoCalling} callInProg:'{callInProg}'");
                     }
                 }
                 else
@@ -1042,17 +1110,18 @@ namespace WSJTX_Controller
             if (toCall == "CQ" && (settingChanged || (ctrl.directedCheckBox.Checked && ctrl.directedTextBox.Text.Trim().Length > 0)))
             {
                 xmitCycleCount = 0;
-                txTimeout = true;
+                newDirCq = true;
                 if (settingChanged)
                 {
                     ctrl.WsjtxSettingConfirmed();
                     settingChanged = false;
                 }
-                DebugOutput($"{Time()} Reset(5) (new directed CQ, or setting changed) xmitCycleCount:{xmitCycleCount}");
+                DebugOutput($"{Time()} Reset(5) (new directed CQ, or setting changed) xmitCycleCount:{xmitCycleCount} newDirCq:{newDirCq}");
             }
 
-            DebugOutput($"{Time()} Tx end done: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall:'{tCall}' qsoLogged:{qsoLogged}\n");
+            DebugOutput($"{Time()} Tx end done: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'\n           tCall:'{tCall}' qsoLogged:{qsoLogged} callInProg:'{callInProg} autoCalling:{autoCalling}'\n");
             ShowTimeout();
+            UpdateDebug();      //unconditional
         }
 
         private void LogQso(string toCall)
@@ -1065,17 +1134,19 @@ namespace WSJTX_Controller
             ba = emsg.GetBytes();
             udpClient2.Send(ba, ba.Length);
             DebugOutput($"{Time()} >>>>>Sent 'Log Req' cmd:5 cmdCheck:{cmdCheck}\n{emsg}");
-        }
-
-        private string CallInProgress()
-        {
-            if (replyCmd != null) return WsjtxMessage.DeCall(replyCmd);     //last cmd sent determines call in-progress
-            return WsjtxMessage.ToCall(txMsg);                              //no call-related cmd sent, so last Tx determines call in-progress
+            qsoLogged = true;
         }
 
         private bool IsEvenPeriod(int msec)     //milliseconds past start of the current minute
         {
-            return (msec / trPeriod) % 2 == 0;
+            if (mode == "FT4")
+            {
+                return !(msec == 07000 || msec == 22000 || msec == 37000 || msec == 52000);
+            }
+            else
+            {
+                return (msec / trPeriod) % 2 == 0;
+            }
         }
 
         private string NextDirCq()
@@ -1085,14 +1156,7 @@ namespace WSJTX_Controller
             {
                 string[] dirWords = ctrl.directedTextBox.Text.Trim().ToUpper().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 string s = dirWords[rnd.Next() % dirWords.Length];
-                if (s == "*")           //not directed
-                {
-                    dirCq = "";
-                }
-                else
-                {
-                    dirCq = " " + s;
-                }
+                if (s != "*" && s.Length <= 3) dirCq = " " + s;          //is directed
                 DebugOutput($"{Time()} dirCq:{dirCq}");
             }
             return dirCq;
@@ -1120,10 +1184,31 @@ namespace WSJTX_Controller
             lastTxWatchdog = null;
             lastDialFrequency = null;
             trPeriod = null;
+            autoCalling = true;
+            myCall = null;
+            myGrid = null;
+            lastTxMsg = null;
+            callInProg = null;
+            txMsg = null;
+            transmitting = false;
+            decoding = false;
+            qsoLogged = false;
+            mode = "";
+            rawMode = "";
+            txTimeout = false;
+            replyCmd = null;
+            curCmd = null;
+            replyDecode = null;
+            qCall = null;
+            tCall = null;
+            newDirCq = false;
+            dxCall = null;
+            xmitCycleCount = 0;
             logList.Clear();        //can re-log on new mode
             ShowLogged();
             ClearCalls();
             UpdateDebug();
+            UpdateAddCall();
             DebugOutput($"\n\n{Time()} opMode:{opMode} NegoState:{WsjtxMessage.NegoState}");
         }
 
@@ -1132,12 +1217,16 @@ namespace WSJTX_Controller
             callQueue.Clear();
             callDict.Clear();
             ShowQueue();
-            ClearAltCallList();
+            allCallDict.Clear();
             reportList.Clear();
-            rogerReportList.Clear();
             xmitCycleCount = 0;
             ShowTimeout();
             ctrl.timer2.Stop();
+        }
+
+        private void UpdateAddCall()
+        {
+            ctrl.addCallLabel.Visible = (advanced && opMode == OpModes.ACTIVE);
         }
 
         private bool UpdateCall(string call, DecodeMessage msg)
@@ -1145,12 +1234,12 @@ namespace WSJTX_Controller
             if (callDict.ContainsKey(call))
             {
                 callDict.Remove(call);
-                callDict.Add(deCall, msg);
+                callDict.Add(call, msg);
                 ShowQueue();
-                DebugOutput($"{Time()} Updated {deCall}:{CallQueueString()} {CallDictString()}");
+                DebugOutput($"{Time()} Updated {call}:{CallQueueString()} {CallDictString()}");
                 return true;
             }
-            DebugOutput($"{Time()} Not updated {deCall}:{CallQueueString()} {CallDictString()}");
+            DebugOutput($"{Time()} Not updated {call}:{CallQueueString()} {CallDictString()}");
             return false;
         }
 
@@ -1174,7 +1263,7 @@ private bool RemoveCall(string call)
 
                 if (callDict.Count != callQueue.Count)
                 {
-                    Play("dive.wav");
+                    Console.Beep();
                     DebugOutput("ERROR: queueDict and callDict out of sync");
                     errorDesc = " queueDict out of sync";
                     UpdateDebug();
@@ -1193,6 +1282,7 @@ private bool RemoveCall(string call)
         //return false if already added
         private bool AddCall(string call, DecodeMessage msg)
         {
+            tCall = null;               //prevent call removal from queue at timeout
             DecodeMessage dmsg;
             if (!callDict.TryGetValue(call, out dmsg))     //dictionary does not contain call data for this call sign
             {
@@ -1206,7 +1296,7 @@ private bool RemoveCall(string call)
             DebugOutput($"{Time()} Not enqueued {call}: {CallQueueString()} {CallDictString()}");
             return false;
         }
-
+        
         //get next call/msg in queue;
         //queue not assume to have any entries;
         //return null if failure
@@ -1223,7 +1313,7 @@ private bool RemoveCall(string call)
 
             if (!callDict.TryGetValue(call, out dmsg))
             {
-                Play("dive.wav");
+                Console.Beep();
                 DebugOutput("ERROR: '{call}' not found");
                 errorDesc = "'{call}' not found";
                 UpdateDebug();
@@ -1234,7 +1324,7 @@ private bool RemoveCall(string call)
 
             if (callDict.Count != callQueue.Count)
             {
-                Play("dive.wav");
+                Console.Beep();
                 DebugOutput("ERROR: callDict and queueDict out of sync");
                 errorDesc = " callDict out of sync";
                 UpdateDebug();
@@ -1270,40 +1360,12 @@ private bool RemoveCall(string call)
             return sb.ToString();
         }
 
-        private string AltCallListString()
-        {
-            string delim = "";
-            StringBuilder sb = new StringBuilder();
-            sb.Append("altCallList [");
-            foreach (string call in altCallList)
-            {
-                sb.Append(delim + call);
-                delim = ", ";
-            }
-            sb.Append("]");
-            return sb.ToString();
-        }
-
         private string CallDictString()
         {
             string delim = "";
             StringBuilder sb = new StringBuilder();
             sb.Append("callDict [");
             foreach (var entry in callDict)
-            {
-                sb.Append(delim + entry.Key);
-                delim = " ";
-            }
-            sb.Append("]");
-            return sb.ToString();
-        }
-
-        private string AltCallDictString()
-        {
-            string delim = "";
-            StringBuilder sb = new StringBuilder();
-            sb.Append("altCallDict [");
-            foreach (var entry in altCallDict)
             {
                 sb.Append(delim + entry.Key);
                 delim = " ";
@@ -1405,8 +1467,8 @@ private bool RemoveCall(string call)
         {
             if (callQueue.Count == 0)
             {
-                ctrl.callText.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-                ctrl.callText.ForeColor = System.Drawing.Color.Gray;
+                ctrl.callText.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(0)));
+                ctrl.callText.ForeColor = Color.Gray;
                 ctrl.callText.Text = "[None]";
                 return;
             }
@@ -1427,22 +1489,22 @@ private bool RemoveCall(string call)
                     sb.Append("\n");
                 }
             }
-            ctrl.callText.Font = new System.Drawing.Font("Consolas", 10.0F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            ctrl.callText.ForeColor = System.Drawing.Color.Black;
+            ctrl.callText.Font = new Font("Consolas", 10.0F, FontStyle.Bold, GraphicsUnit.Point, ((byte)(0)));
+            ctrl.callText.ForeColor = Color.Black;
             ctrl.callText.Text = sb.ToString();
         }
 
         private void ShowStatus()
         {
             string status = "";
-            System.Drawing.Color color = System.Drawing.Color.Red;
-            ctrl.statusText.ForeColor = System.Drawing.Color.White;
+            Color color = Color.Red;
+            ctrl.statusText.ForeColor = Color.White;
 
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.FAIL || !modeSupported)
             {
                 ctrl.statusText.Text = failReason;
-                ctrl.statusText.BackColor = System.Drawing.Color.Yellow;
-                ctrl.statusText.ForeColor = System.Drawing.Color.Black;
+                ctrl.statusText.BackColor = Color.Yellow;
+                ctrl.statusText.ForeColor = Color.Black;
                 return;
             }
 
@@ -1453,8 +1515,8 @@ private bool RemoveCall(string call)
                     status = "Connecting: Select 'Monitor', wait until ready";
                     break;
                 case (int)OpModes.ACTIVE:
-                    status = txEnabled ? (qsoLogged ? "QSO logged" : (autoCalling ? "Automatic calling enabled" : "Automatic calling paused...")) : "To start: Select 'Enable Tx'";
-                    color = System.Drawing.Color.Green;
+                    status = txEnabled ? (autoCalling ? "Automatic calling enabled" : "Automatic calling paused...") : "To start: Select 'Enable Tx'";
+                    color = Color.Green;
                     break;
             }
             ctrl.statusText.BackColor = color;
@@ -1465,8 +1527,8 @@ private bool RemoveCall(string call)
         {
             if (logList.Count == 0)
             {
-                ctrl.loggedText.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-                ctrl.loggedText.ForeColor = System.Drawing.Color.Gray;
+                ctrl.loggedText.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(0)));
+                ctrl.loggedText.ForeColor = Color.Gray;
                 ctrl.loggedText.Text = "[None]";
                 return;
             }
@@ -1484,8 +1546,8 @@ private bool RemoveCall(string call)
             {
                 sb.Append("..more..");
             }
-            ctrl.loggedText.Font = new System.Drawing.Font("Consolas", 10.0F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            ctrl.loggedText.ForeColor = System.Drawing.Color.Black;
+            ctrl.loggedText.Font = new Font("Consolas", 10.0F, FontStyle.Bold, GraphicsUnit.Point, ((byte)(0)));
+            ctrl.loggedText.ForeColor = Color.Black;
             ctrl.loggedText.Text = sb.ToString();
         }
         /*
@@ -1496,198 +1558,26 @@ private bool RemoveCall(string call)
         }
         */
 
-        public void AltPauseButtonToggeled()
+ 
+        public void AddSelectedCall(EnqueueDecodeMessage emsg)
         {
-            if (altListPaused)
+            string msg = emsg.Message;
+
+            if (myCall == null || opMode != OpModes.ACTIVE)
             {
-                ctrl.altPauseButton.Text = "Pause list";
-            }
-            else
-            {
-                ctrl.altPauseButton.Text = "Resume list";
-            }
-            altListPaused = !altListPaused;
-            UpdateAltCallListStatus();
-        }
-
-        private void AddAltCall(DecodeMessage dmsg)
-        {
-            if (altListPaused) return;
-            if (dmsg.Message.Contains("...")) return;
-            if (cQonly && !dmsg.IsCQ()) return;
-            string deCall = WsjtxMessage.DeCall(dmsg.Message);
-            if (deCall == null) return;
-
-            if (altCallList.Count > 0 && altCallList[0].Contains("..."))
-            {
-                ctrl.altListBox.Enabled = true;
-                altCallList.Clear();
-            }
-
-            //DebugOutput($"\n{Time()} AddAltCall '{dmsg.Message}'\n{AltCallListString()}");
-            /*  try list with duplicates (easier to find calls that way)    tempOnly
-            if (altCallList.Contains(dmsg.Message))         //don't need duplicates, but show latest, in sequence
-            {
-                altCallList.Remove(dmsg.Message);     //remove from somewhere in the list
-                //DebugOutput($"{spacer}after remove:'{dmsg.Message}'\n{AltCallListString()}");
-            }
-            */
-            latestDecodeTime = dmsg.SinceMidnight;
-            altCallList.Add(dmsg.Message);      //save the message body
-            //DebugOutput($"{spacer}after add:'{dmsg.Message}'\n{AltCallListString()}");
-
-            //update altCallDict by removing existing decode first
-            if (altCallDict.ContainsKey(deCall))        //deCall known to not be null
-            {
-                DecodeMessage rmsg;
-                altCallDict.TryGetValue(deCall, out rmsg);
-                //DebugOutput($"{spacer}before remove deCall:'{deCall}' msg:'{rmsg.Message}' raw:'{rmsg}'\n{AltCallDictString()}");
-                altCallDict.Remove(deCall);
-                //DebugOutput($"{spacer}after  remove deCall:'{deCall}' msg:'{rmsg.Message}' raw:'{rmsg}'\n{AltCallDictString()}");
-            }
-            altCallDict.Add(deCall, dmsg);      //save the message for SNR
-            //DebugOutput($"{spacer}after add deCall:'{deCall}' msg:'{dmsg.Message}' raw:'{dmsg}'\n{AltCallDictString()}");
-
-            //shorten list
-            if (altCallList.Count > 128)
-            {
-                string remDeCall = WsjtxMessage.DeCall(altCallList[0]);          //the 'from' call being removed (might be a separator)
-                //DebugOutput($"{Time()} AddAltCall: shorten altCallList, remDeCall:'{remDeCall}' msg:{altCallList[0]}");
-                altCallList.RemoveAt(0);
-                //DebugOutput($"{spacer}after remove remDeCall:'{remDeCall}'\n{AltCallListString()}");
-
-                //remove remDeCall from call dictionary if no longer present in altCallList in any form 
-                //(different forms of msgs from the same call are allowed in altCallList)
-                if (remDeCall != null)              //not a separator
-                {
-                    string aDeCall = null;
-                    foreach (string aMsg in altCallList)    //search thru altCallList
-                    {
-                        aDeCall = WsjtxMessage.DeCall(aMsg);    //might be null if msg invalid
-                        if (aDeCall == remDeCall)           //the call removed from altCallList still exists in altCallList in a different form
-                        {
-                            break;
-                        }
-                    }
-                    if (aDeCall != remDeCall)               //the call is not in altCallList in any form
-                    {
-                        //DebugOutput($"{spacer}shorten altCallDict, remDeCall:'{remDeCall}'");
-                        if (altCallDict.ContainsKey(remDeCall)) altCallDict.Remove(remDeCall);
-                    }
-                    //DebugOutput($"{Time()} AddAltCall: after check altCallDict, remDeCall:'{remDeCall}'");
-                }
-            }
-
-            ctrl.altListBox.Font = new System.Drawing.Font("Consolas", 10.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            ctrl.altListBox.ForeColor = System.Drawing.Color.Black;
-            ctrl.altListBox.DataSource = null;
-            ctrl.altListBox.DataSource = altCallList;
-            ctrl.altListBox.ClearSelected();
-            ctrl.altListBox.TopIndex = ctrl.altListBox.Items.Count - 1;
-        }
-
-        public void AddAltCallSeparator()
-        {
-            if (altListPaused) return;
-
-            altCallList.Add("-------------------------");
-            ctrl.altListBox.DataSource = null;
-            ctrl.altListBox.DataSource = altCallList;
-            ctrl.altListBox.ClearSelected();
-            ctrl.altListBox.TopIndex = ctrl.altListBox.Items.Count - 1;
-        }
-
-        public void ClearAltCallList()
-        {
-            ctrl.altListBox.DataSource = null;
-            altCallList.Clear();
-            altCallDict.Clear();
-            ctrl.altListBox.DataSource = altCallList;
-            UpdateAltCallListStatus();
-        }
-
-        private void UpdateAltCallListStatus()
-        {
-            if (altCallList.Count == 0 || altCallList[0].Contains("..."))
-            {
-                ctrl.altListBox.Enabled = false;
-                altCallList.Clear();
-                if (altListPaused)
-                {
-                    altCallList.Add("List paused...");
-                }
-                else if (opMode == OpModes.START || opMode == OpModes.ACTIVE)
-                {
-                    string s = txFirst ? "odd" : "even";
-                    altCallList.Add($"Waiting for calls in '{s}' cycle...");
-                }
-                else
-                {
-                    altCallList.Add("Connecting...");
-                }
-                ctrl.altListBox.DataSource = null;
-                ctrl.altListBox.DataSource = altCallList;
-                ctrl.altListBox.ClearSelected();
-                ctrl.altListBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-                ctrl.altListBox.ForeColor = System.Drawing.Color.Gray;
-            }
-            else
-            {
-                ctrl.altListBox.Enabled = true;
-                if (altListPaused)
-                {
-                    if (!altCallList[altCallList.Count - 1].Contains("..."))
-                    {
-                        altCallList.Add("...list paused...");
-                        ctrl.altListBox.DataSource = null;
-                        ctrl.altListBox.DataSource = altCallList;
-                        ctrl.altListBox.ClearSelected();
-                        ctrl.altListBox.TopIndex = ctrl.altListBox.Items.Count - 1;
-                    }
-                }
-                else
-                {
-                    if (altCallList[altCallList.Count - 1].Contains("..."))
-                    {
-                        altCallList.RemoveAt(altCallList.Count - 1);
-                        ctrl.altListBox.DataSource = null;
-                        ctrl.altListBox.DataSource = altCallList;
-                        ctrl.altListBox.ClearSelected();
-                        ctrl.altListBox.TopIndex = ctrl.altListBox.Items.Count - 1;
-                    } 
-                }
-            }
-        }
-
-        public void AltListBoxClicked()
-        {
-            if (ctrl.altListBox.SelectedItem == null)
-            {
-                ctrl.altListBox.ClearSelected();
+                ctrl.ShowMsg("Not ready to add calls yet", true);
                 return;
             }
-            string msgBody = ctrl.altListBox.SelectedItem.ToString();
 
-            if (msgBody.Contains("...") || msgBody.Contains("---"))            //status msg selected
+            if (!emsg.Modifier && IsEvenPeriod(emsg.SinceMidnight.Seconds * 1000) == txFirst) 
             {
-                ctrl.altListBox.ClearSelected();
+                string s = txFirst ? "odd" : "even/1st";
+                ctrl.ShowMsg($"Select calls in the '{s}' sequence(s)", true);
                 return;
             }
-        }
-
-
-        public void AltCallSelected(bool shiftKey)
-        {
-            if (ctrl.altListBox.SelectedItem == null)
+            if (msg.Contains("..."))
             {
-                ctrl.altListBox.ClearSelected();
-                return;
-            }
-            string msg = ctrl.altListBox.SelectedItem.ToString();
-
-            if (msg.Contains("...") || msg.Contains("---"))            //status msg selected
-            {
-                ctrl.altListBox.ClearSelected();
+                ctrl.ShowMsg("Can't add call from hashed message", true);
                 return;
             }
 
@@ -1696,102 +1586,85 @@ private bool RemoveCall(string call)
 
             if (deCall == null)
             {
-                errorDesc = "no 'DE' part";
-                Console.Beep();
-                UpdateDebug();
+                ctrl.ShowMsg("No 'from' call in this message", true);
                 return;
             }
 
-            if (shiftKey)
+            if (emsg.Modifier)      //ctrl + alt key
             {
                 if (msg.Contains("CQ"))
                 {
-                    errorDesc = "msg contains CQ";
-                    Console.Beep();
-                    UpdateDebug();
+                    ctrl.ShowMsg("Message only contains CQ", true);
                     return;
                 }
                 if (toCall == null)
                 {
-                    errorDesc = "no 'to' call";
-                    Console.Beep();
-                    UpdateDebug();
+                    ctrl.ShowMsg("No 'to' call in this message", true);
                     return;
                 }
                 if (toCall == myCall)
                 {
-                    errorDesc = $"{toCall} is to me";
-                    Console.Beep();
-                    UpdateDebug();
+                    ctrl.ShowMsg($"{toCall} is to this station", true);
                     return;
                 }
 
-                DebugOutput($"{Time()} shift/dbl-click on {toCall}");
+                DebugOutput($"{Time()} ctrl/alt/dbl-click on {toCall}");
                 //build a CQ message to reply to
-                DecodeMessage nmsg; 
+                DecodeMessage nmsg;
                 nmsg = new DecodeMessage();
                 nmsg.Mode = rawMode;
                 nmsg.SchemaVersion = WsjtxMessage.NegotiatedSchemaVersion;
                 nmsg.New = true;
                 nmsg.OffAir = false;
+                nmsg.UseStdReply = true;          //override skipGrid since no SNR available
                 nmsg.Id = WsjtxMessage.UniqueId;
-                nmsg.Snr = 0;               //not used
+                nmsg.Snr = -10;             //not used
                 nmsg.DeltaTime = 0.0;       //not used
-                nmsg.DeltaFrequency = 1000; //not used
+                nmsg.DeltaFrequency = 1500; //not used
                 nmsg.Message = $"CQ {toCall}";
                 nmsg.SinceMidnight = latestDecodeTime + new TimeSpan(0, 0, 0, 0, (int)trPeriod);
+                DebugOutput($"{nmsg}");
                 ClearCalls();                       //nothing left to do this tx period
                 AddCall(toCall, nmsg);              //add to call queue
 
                 if (txEnabled)
                 {
                     txTimeout = true;                   //immediate switch to other tx period
-                    tCall = null;                       //prevent call removal from queue
-                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}'");
+                    autoCalling = true;
+                    callInProg = null;
+                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}' autoCalling:{autoCalling} callInProg:'{callInProg}'");
                     CheckNextXmit();
                 }
+                Play("blip.wav");
             }
-            else   //not shift key
+            else   //only alt key
             {
                 if (callQueue.Contains(deCall))
                 {
-                    errorDesc = $"{deCall} already in queue";
-                    Console.Beep();
-                    UpdateDebug();
+                    ctrl.ShowMsg($"{deCall} is already in the call list", true);
                     return;
                 }
-                if (txEnabled && deCall == CallInProgress())
+                if (txEnabled && deCall == callInProg)
                 {
-                    errorDesc = $"{deCall} in progress";
-                    Console.Beep();
-                    UpdateDebug();
+                    ctrl.ShowMsg($"{deCall} is already in progress", true);
                     return;
                 }
 
-                if (!altCallDict.ContainsKey(deCall))
-                {
-                    errorDesc = $"{deCall} not stored";
-                    Console.Beep();
-                    UpdateDebug();
-                    return;
-                }
-
-                DebugOutput($"{Time()} dbl-click on {toCall}");
+                DebugOutput($"{Time()} alt/dbl-click on {toCall}");
                 //get actual message to reply to
-                DecodeMessage dmsg;
-                altCallDict.TryGetValue(deCall, out dmsg);  //need SNR if skipping grid msg
-                AddCall(deCall, dmsg);              //add to call queue
+                AddCall(deCall, emsg);              //add to call queue
 
-                if (txEnabled && callQueue.Count == 1 && qsoState == WsjtxMessage.QsoStates.CALLING)  //stops CQing, starts the first xmit at next decode/status/heartbeat msg
+                if (txEnabled && autoCalling && callQueue.Count == 1 && qsoState == WsjtxMessage.QsoStates.CALLING)  //stops CQing, starts the first xmit at next decode/status/heartbeat msg
                 {
                     txTimeout = true;
-                    tCall = null;                       //prevent call removal from queue
-                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}'");
+                    callInProg = null;
+                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
                 }
+                Play("blip.wav");
             }
             UpdateDebug();
         }
-
+ 
         public void ShowTimeout()
         {
             if (xmitCycleCount == 0)
@@ -1804,53 +1677,125 @@ private bool RemoveCall(string call)
                 switch (Math.Max(1, ctrl.timeoutNumUpDown.Value - xmitCycleCount - 1))
                 { 
                     case 1:
-                        ctrl.timeoutLabel.ForeColor = System.Drawing.Color.Red;
+                        ctrl.timeoutLabel.ForeColor = Color.Red;
                         break;
 
                     case 2:
-                        ctrl.timeoutLabel.ForeColor = System.Drawing.Color.Orange;
+                        ctrl.timeoutLabel.ForeColor = Color.Orange;
                         break;
 
                     default:
-                        ctrl.timeoutLabel.ForeColor = System.Drawing.Color.Green;
+                        ctrl.timeoutLabel.ForeColor = Color.Green;
                         break;
                 }
-                
                 ctrl.timeoutLabel.Text = $"(now: {xmitCycleCount + 1})";
             }
         }
 
-        private void UpdateDebug()
+        public void UpdateDebug()
         {
             if (!debug) return;
             string s;
+            bool chg = false;
 
             try
             {
-                ctrl.label5.Text = $"xmit: {transmitting.ToString().Substring(0, 1)}";
-                ctrl.label6.Text = $"UDP: {msg.GetType().Name.Substring(0, 6)}";
-                ctrl.label7.Text = $"txEnable: {txEnabled.ToString().Substring(0, 1)}";
+                if (autoCalling != lastAutoCalling)
+                {
+                    ctrl.label5.ForeColor = Color.Red;
+                    chg = true;
+                }
+                s = (autoCalling ? "Auto" : "Manual");
+                ctrl.label5.Text = $"{s}";
+                lastAutoCalling = autoCalling;
 
+                ctrl.label6.Text = $"UDP: {msg.GetType().Name.Substring(0, 6)}";
+                ctrl.label7.Text = $"txEn: {txEnabled.ToString().Substring(0, 1)}";
+                ctrl.label23.Text = $"dblClk: {dblClk.ToString().Substring(0, 1)}";
+
+                if (replyCmd != lastReplyCmd)
+                {
+                    ctrl.label8.ForeColor = Color.Red;
+                    ctrl.label21.ForeColor = Color.Red;
+                    chg = true;
+                }
                 ctrl.label8.Text = $"cmd from: {WsjtxMessage.DeCall(replyCmd)}";
+                lastReplyCmd = replyCmd;
+
                 ctrl.label9.Text = $"opMode: {opMode}";
 
-                string txTo = (txMsg ==  null ? "" : WsjtxMessage.ToCall(txMsg));
+                string txTo = (txMsg == null ? "" : WsjtxMessage.ToCall(txMsg));
                 s = (txTo == "CQ" ? null : txTo);
                 ctrl.label12.Text = $"tx to: {s}";
-                string inPr = (CallInProgress() == null ? "" : CallInProgress());
-                s = (inPr == "CQ" ? null : txTo);
-                ctrl.label13.Text = $"in-prog: {s}";
 
-                ctrl.label14.Text = $"qsoState: {qsoState}";
+                if (callInProg != lastCallInProg)
+                {
+                    ctrl.label13.ForeColor = Color.Red;
+                    chg = true;
+                }
+                ctrl.label13.Text = $"in-prog: {callInProg}";
+                lastCallInProg = callInProg;
+
+                if (qsoState != lastQsoStateDebug)
+                {
+                    ctrl.label14.ForeColor = Color.Red;
+                    chg = true;
+                }
+                    
+                    
+                ctrl.label14.Text = $"qso: {qsoState}";
+                lastQsoStateDebug = qsoState;
+
                 ctrl.label15.Text = $"log call: {qCall}";
 
-                //ctrl.label9.Text = $"replyTo: {replyCmd}";
-                //ctrl.label13.Text = $"txMsg: {txMsg}";
-
+                if (txTimeout != lastTxTimeout)
+                {
+                    ctrl.label10.ForeColor = Color.Red;
+                    chg = true;
+                }
                 ctrl.label10.Text = $"t/o: {txTimeout.ToString().Substring(0, 1)}";
+                lastTxTimeout = txTimeout;
+
                 ctrl.label11.Text = $"txFirst: {txFirst.ToString().Substring(0, 1)}";
                 ctrl.label16.Text = $"Nego:{WsjtxMessage.NegoState}";
-                ctrl.label17.Text = $"Err: {errorDesc}";
+
+                if (txMsg != lastTxMsg && !WsjtxMessage.IsCQ(txMsg) && !WsjtxMessage.IsCQ(lastTxMsg))
+                {
+                    ctrl.label19.ForeColor = Color.Red;
+                    chg = true;
+                }
+                ctrl.label19.Text = $"tx:  {txMsg}";
+
+                ctrl.label18.Text = $"last: {lastTxMsg}";
+
+                if (lastDxCallDebug != dxCall)
+                {
+                    ctrl.label4.ForeColor = Color.Red;
+                    chg = true;
+                }
+                ctrl.label4.Text = $"dxCall: {dxCall}";
+                lastDxCallDebug = dxCall;
+
+                int i = 0;
+                foreach (var entry in allCallDict)
+                {
+                    i = i + entry.Value.Count;
+                }
+                ctrl.label3.Text = $"rpts: {allCallDict.Count}/{i}/{reportList.Count}";
+                ctrl.label21.Text = $"replyCmd: {replyCmd}";
+
+                //if (curCmd != lastCurCmd) ctrl.label17.ForeColor = Color.Red;
+                ctrl.label17.Text = $"curCmd: {curCmd}";
+                lastCurCmd = curCmd;
+
+                ctrl.label20.Text = $"t/o cnt: {xmitCycleCount}";
+                ctrl.label22.Text = $"tCall: {tCall}";
+
+                if (chg)
+                {
+                    ctrl.timer7.Interval = 2000;
+                    ctrl.timer7.Start();
+                }
             }
             catch (Exception err)
             {
@@ -1894,7 +1839,6 @@ private bool RemoveCall(string call)
 
             suspendComm = false;
         }
-
 
         private void ModelessDialog(string text)
         {
@@ -1974,5 +1918,131 @@ private bool RemoveCall(string call)
                 Console.WriteLine(s);
             }
         }
+
+        //during decoding, check for late signof (73 or RR73) 
+        //from a call sign that isn't (or won't be) the call in progress;
+        //if reports have bee exchanged, log the QSO;
+        //logging is done directly via log file, not via WSJT-X
+        //todo: add CSV log file
+        private void CheckLateLog(string call, DecodeMessage msg)
+        {
+            DebugOutput($"{Time()} CheckLateLog: call'{call}' callInProg:'{callInProg}' msg:{msg.Message} Is73orRR73:{WsjtxMessage.Is73orRR73(msg.Message)}");
+            if (call == null || call == callInProg || !WsjtxMessage.Is73orRR73(msg.Message)) return;
+            DebugOutput($"{spacer}call is not in progress and is RRR73 or 73");
+            List<DecodeMessage> msgList;
+            if (!allCallDict.TryGetValue(call, out msgList)) return;          //no previous call(s) from DX station
+            DebugOutput($"{spacer}recd previous call(s)");
+            DecodeMessage rMsg;
+            if ((rMsg = msgList.Find(RogerReport)) == null && (rMsg = msgList.Find(Report)) == null) return;        //the DX station never reported a signal
+            DebugOutput($"{spacer}recd previous report(s)");
+            if (!reportList.Contains(call)) return;         //never reported SNR to the DX station
+            DebugOutput($"{spacer}sent previous report(s)");
+            LogDirect(call, rMsg, msg);              //process a "late" QSO completion
+        }
+
+        private bool Rogers(DecodeMessage msg)
+        {
+            return WsjtxMessage.IsRogers(msg.Message);
+        }
+        private bool RogerReport(DecodeMessage msg)
+        {
+            return WsjtxMessage.IsRogerReport(msg.Message);
+        }
+        private bool Report(DecodeMessage msg)
+        {
+            return WsjtxMessage.IsReport(msg.Message);
+        }
+
+        //log a QSO directly to the WSJT-X .ADI log file
+        private void LogDirect(string call, DecodeMessage reptMsg, DecodeMessage lateMsg)
+        {
+            if (!File.Exists(WsjtxLogPathFilename)) return;
+            if (debug) Play("dive.wav");
+
+            //<call:4>W1AW <gridsquare:4>EM77 <mode:3>FT8 <rst_sent:3>-10 <rst_rcvd:3>+01 <qso_date:8>20201226 
+            //<time_on:6>042215 <qso_date_off:8>20201226 <time_off:6>042300 <band:3>40m <freq:8>7.076439 
+            //<station_callsign:4>WM8Q <my_gridsquare:6>DN61OK <eor>
+
+            string rstSent = $"{reptMsg.Snr:+#;-#;+00}";
+            string rstRecd = WsjtxMessage.RstRecd(reptMsg.Message);
+            string qsoDateOn = reptMsg.RxDate.ToString("yyyyMMdd");
+            string qsoDateOff = lateMsg.RxDate.ToString("yyyyMMdd");
+            string qsoTimeOn = reptMsg.SinceMidnight.ToString("hhmmss");      //one of the report decodes
+            string qsoTimeOff = lateMsg.SinceMidnight.ToString("hhmmss");
+            string qsoMode = mode;
+            string freq = (dialFrequency + txOffset / 1e6).ToString("F6");
+            string band = FreqToBand(dialFrequency / 1e6);
+
+            string logLine = $"<call:{call.Length}>{call}  <gridsquare:0> <mode:{mode.Length}>{mode} <rst_sent:{rstSent.Length}>{rstSent} <rst_rcvd:{rstRecd.Length}>{rstRecd} <qso_date:{qsoDateOn.Length}>{qsoDateOn} <time_on:{qsoTimeOn.Length}>{qsoTimeOn} <qso_date_off:{qsoDateOff.Length}>{qsoDateOff} <time_off:{qsoTimeOff.Length}>{qsoTimeOff} <band:{band.Length}>{band} <freq:{freq.Length}>{freq} <station_callsign:{myCall.Length}>{myCall} <my_gridsquare:{myGrid.Length}>{myGrid} <eor>";
+
+            int retry = 3;
+            while (true)
+            {
+                try
+                {
+                    StreamWriter lsw = File.AppendText(WsjtxLogPathFilename);
+                    lsw.WriteLine(logLine);
+                    lsw.Close();
+                    break;
+                }
+                catch (Exception err)
+                {
+                    DebugOutput($"{Time()} ERROR: LogDirect {err}");
+                    Console.Beep();
+
+                    if (--retry == 0)
+                    {
+                        DebugOutput($"{Time()} ERROR: LogDirect failed, call'{call}'");
+                        Console.Beep();
+                        return;
+                    }
+                    Thread.Sleep(100);
+                }
+            }
+
+            if (!debug && ctrl.loggedCheckBox.Checked) Play("echo.wav");
+            ctrl.ShowMsg($"Logging late QSO with {call}", false);
+            logList.Add(call);    //even if already logged this mode/band
+            ShowLogged();
+            DebugOutput($"{Time()} QSO logged late: call'{call}'");
+            RemoveAllCall(call);
+            UpdateDebug();
+        }
+
+        private string FreqToBand(double freq)
+        {
+            if (freq >= 0.1357 && freq <= 0.1378) return "2200m";
+            if (freq >= 0.472 && freq <= 0.479) return "630m";
+            if (freq >= 1.8 && freq <= 2.0) return "160m";
+            if (freq >= 3.5 && freq <= 4.0) return "80m";
+            if (freq >= 5.35 && freq <= 5.37) return "60m";
+            if (freq >= 7.0 && freq <= 7.3) return "40m";
+            if (freq >= 10.1 && freq <= 10.15) return "30m";
+            if (freq >= 14.0 && freq <= 14.35) return "20m";
+            if (freq >= 18.068 && freq <= 18.168) return "17m";
+            if (freq >= 21.0 && freq <= 21.45) return "15m";
+            if (freq >= 24.89 && freq <= 24.99) return "12m";
+            if (freq >= 28.0 && freq <= 29.7) return "10m";
+            if (freq >= 50.0 && freq <= 54.0) return "6m";
+            if (freq >= 144.0 && freq <= 148.0) return "2m";
+            return "";
+        }
+
+        private void RemoveAllCall(string call)
+        {
+            
+            if (allCallDict.ContainsKey(call))
+            {
+                allCallDict.Remove(call);
+                DebugOutput($"{spacer} removed '{call}' from allCallDict");
+            }
+
+            if (reportList.Contains(call))
+            {
+                reportList.Remove(call);
+                DebugOutput($"{spacer} removed '{call}' from reportList");
+            }
+        }
     }   
+ 
 }
