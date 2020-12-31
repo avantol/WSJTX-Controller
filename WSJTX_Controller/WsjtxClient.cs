@@ -399,6 +399,7 @@ namespace WSJTX_Controller
                 lastTxEnabled = txEnabled;
                 mode = smsg.Mode;
                 specOp = (int)smsg.SpecialOperationMode;
+                CheckModeSupported();
                 configuration = smsg.ConfigurationName.Trim(). Replace(' ', '-');
                 if (!CheckMyCall(smsg)) return;
                 DebugOutput($"{Time()}\nStatus     myCall:'{myCall}' myGrid:'{myGrid}' mode:{mode} specOp:{specOp} configuration:{configuration} check:{smsg.Check}");
@@ -618,10 +619,8 @@ namespace WSJTX_Controller
                     if (lastTxEnabled == null) lastTxEnabled = txEnabled;     //initializlastGenMsge
                     if (lastDecoding == null) lastDecoding = decoding;     //initialize
                     if (lastTxWatchdog == null) lastTxWatchdog = smsg.TxWatchdog;   //initialize
-                    if (lastMode == null) lastMode = mode;                     //initialize
                     if (lastTxFirst == null) lastTxFirst = txFirst;                     //initialize
                     if (lastDialFrequency == null) lastDialFrequency = smsg.DialFrequency; //initialize
-                    if (lastSpecOp == null) lastSpecOp = (int)smsg.SpecialOperationMode; //initialize
                     if (lastTxMsg == null) lastTxMsg = txMsg;   //initialize
                     if (smsg.TRPeriod != null) trPeriod = (int)smsg.TRPeriod;
 
@@ -690,9 +689,8 @@ namespace WSJTX_Controller
                     if (mode != lastMode)
                     {
                         DebugOutput($"{Time()} mode:{mode} (was {lastMode})");
-
                         ResetOpMode();
-                        DebugOutput($"{spacer}opMode:{opMode}, waiting for mode status...");
+                        CheckModeSupported();
                         lastMode = mode;
                     }
 
@@ -700,20 +698,9 @@ namespace WSJTX_Controller
                     if (specOp != lastSpecOp)
                     {
                         DebugOutput($"{Time()} specOp:{specOp} (was {lastSpecOp})");
-
                         ResetOpMode();
-                        DebugOutput($"{spacer}opMode:{opMode}, waiting for mode status...");
+                        CheckModeSupported();
                         lastSpecOp = specOp;
-                    }
-
-                    //detect supported mode change
-                    modeSupported = supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0);
-                    if (modeSupported != lastModeSupported)
-                    {
-                        DebugOutput($"{Time()} modeSupported:{modeSupported}");
-                        if (!modeSupported) failReason = $"{mode} mode not supported";
-                        lastModeSupported = modeSupported;
-                        ShowStatus();
                     }
 
                     //check for time to flag starting first xmit
@@ -1176,31 +1163,17 @@ namespace WSJTX_Controller
             DebugOutput($"{Time()} Waiting for heartbeat...");
             cmdCheck = RandomCheckString();
             commConfirmed = false;
+            ShowStatus();
             UpdateDebug();
         }
 
         private void ResetOpMode()
         {
             opMode = OpModes.IDLE;
-            modeSupported = true;           //until otherwise detected
-            lastModeSupported = null;
             ShowStatus();
-            lastMode = null;
-            lastXmitting = false;
-            lastTxWatchdog = null;
-            lastDialFrequency = null;
-            trPeriod = null;
             autoCalling = true;
-            myCall = null;
-            myGrid = null;
-            lastTxMsg = null;
             callInProg = null;
-            txMsg = null;
-            transmitting = false;
-            decoding = false;
             qsoLogged = false;
-            mode = "";
-            rawMode = "";
             txTimeout = false;
             replyCmd = null;
             curCmd = null;
@@ -1215,6 +1188,7 @@ namespace WSJTX_Controller
             ClearCalls();
             UpdateDebug();
             UpdateAddCall();
+            ShowStatus();
             DebugOutput($"\n\n{Time()} opMode:{opMode} NegoState:{WsjtxMessage.NegoState}");
         }
 
@@ -1549,16 +1523,23 @@ private bool RemoveCall(string call)
                 return;
             }
 
-            switch ((int)opMode)
+            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.INITIAL)
             {
-                case (int)OpModes.START:            //fall thru
-                case (int)OpModes.IDLE:
-                    status = "Connecting: Select 'Monitor', wait until ready";
-                    break;
-                case (int)OpModes.ACTIVE:
-                    status = txEnabled ? (autoCalling ? "Automatic calling enabled" : "Automatic calling paused...") : "To start: Select 'Enable Tx'";
-                    color = Color.Green;
-                    break;
+               status = "Waiting for WSJT-X...";
+            }
+            else
+            {
+                switch ((int)opMode)
+                {
+                    case (int)OpModes.START:            //fall thru
+                    case (int)OpModes.IDLE:
+                        status = "Connecting: Select 'Monitor', wait until ready";
+                        break;
+                    case (int)OpModes.ACTIVE:
+                        status = txEnabled ? (autoCalling ? "Automatic calling enabled" : "Automatic calling paused...") : "To start: Select 'Enable Tx'";
+                        color = Color.Green;
+                        break;
+                }
             }
             ctrl.statusText.BackColor = color;
             ctrl.statusText.Text = status;
@@ -2093,6 +2074,20 @@ private bool RemoveCall(string call)
         {
             DebugOutput($"Now:       {CurrentStatus()}");
         }
+
+        //detect supported mode
+        private void CheckModeSupported()
+        {
+            string s = "";
+            modeSupported = supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0);
+            DebugOutput($"{Time()} modeSupported:{modeSupported}");
+            if (!modeSupported)
+            {
+                if (specOp != 0) s = "Special ";
+                DebugOutput($"{spacer}opMode:{opMode} specOp:{specOp}, waiting for mode status...");
+                failReason = $"{s}{mode} mode not supported";
+            }
+            ShowStatus();
+        }
     }   
- 
 }
