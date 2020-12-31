@@ -70,6 +70,7 @@ namespace WSJTX_Controller
         private string configuration = null;
         private TimeSpan latestDecodeTime;
         private string callInProg = null;
+        private bool callAddedManual = false;
 
         private WsjtxMessage.QsoStates lastQsoState = WsjtxMessage.QsoStates.INVALID;
         private UdpClient udpClient2;
@@ -652,6 +653,7 @@ namespace WSJTX_Controller
                     //check for manual operation started
                     if (dblClk)             //event, not state: double-clicked on list of calls, WSJT-X will start calling immediately
                     {
+                        DebugOutput($"{Time()} dblClk:{dblClk}");
                         if (callQueue.Count == 0 || callQueue.Peek() != dxCall)         //selected call is not the one to be dequeued next
                         {
                             if (autoCalling)                //only cancel timeout the first time manual operation detected
@@ -674,8 +676,14 @@ namespace WSJTX_Controller
                             }
                         }
                         autoCalling = false;
+                        DebugOutput($"{Time()}\nStatus     {CurrentStatus()}");
                     }
-                    if (!autoCalling) callInProg = dxCall;            //dxCall may be set later than dblClk
+                    if (!autoCalling)
+                    {
+                        callInProg = dxCall;            //dxCall may be set later than dblClk
+                        DebugOutput($"{Time()} callInProg:'{callInProg}'");
+                    }
+                        
 
                     //detect WSJT-X mode change
                     if (mode != lastMode)
@@ -683,7 +691,7 @@ namespace WSJTX_Controller
                         DebugOutput($"{Time()} mode:{mode} (was {lastMode})");
 
                         ResetOpMode();
-                        DebugOutput($"{Time()} opMode:{opMode}, waiting for mode status...");
+                        DebugOutput($"{spacer}opMode:{opMode}, waiting for mode status...");
                         lastMode = mode;
                     }
 
@@ -693,7 +701,7 @@ namespace WSJTX_Controller
                         DebugOutput($"{Time()} specOp:{specOp} (was {lastSpecOp})");
 
                         ResetOpMode();
-                        DebugOutput($"{Time()} opMode:{opMode}, waiting for mode status...");
+                        DebugOutput($"{spacer}opMode:{opMode}, waiting for mode status...");
                         lastSpecOp = specOp;
                     }
 
@@ -701,6 +709,7 @@ namespace WSJTX_Controller
                     modeSupported = supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0);
                     if (modeSupported != lastModeSupported)
                     {
+                        DebugOutput($"{Time()} modeSupported:{modeSupported}");
                         if (!modeSupported) failReason = $"{mode} mode not supported";
                         lastModeSupported = modeSupported;
                         ShowStatus();
@@ -734,6 +743,7 @@ namespace WSJTX_Controller
                     {
                         DebugOutput($"{Time()} qsoState:{qsoState} (was {lastQsoState})");
                         lastQsoState = qsoState;
+                        DebugOutput($"{Time()}\nStatus     {CurrentStatus()}");
                     }
 
                     //check for changed Tx enabled
@@ -765,12 +775,11 @@ namespace WSJTX_Controller
                     }
 
                     //check for watchdog timer status changed
-                    if (lastTxWatchdog != smsg.TxWatchdog)
+                    if (smsg.TxWatchdog != smsg.TxWatchdog)
                     {
+                        DebugOutput($"{Time()} smsg.TxWatchdog:{smsg.TxWatchdog} (was {lastTxWatchdog})");
                         if (smsg.TxWatchdog && opMode == OpModes.ACTIVE)        //only need this event if in valid mode
                         {
-                            string hStatus = $"Status    qsoState:{qsoState} lastTxMsg:{smsg.LastTxMsg} txEnabled:{txEnabled} tCall:'{tCall}' TxWatchdog:{smsg.TxWatchdog} Transmitting:{transmitting} Mode:{mode}";
-                            DebugOutput(hStatus);
                             if (firstDecodeTime != DateTime.MinValue)
                             {
                                 if ((DateTime.Now - firstDecodeTime).TotalMinutes < 15)
@@ -803,16 +812,6 @@ namespace WSJTX_Controller
                         lastTxFirst = txFirst;
                     }
 
-                    //*****end of status determination here*****
-                    //show current status, minimize console clutter
-                    string curStatus = $"Status     myCall:'{myCall}' myGrid:'{myGrid}' callInProg:'{callInProg}' qsoState:{qsoState} txMsg:'{txMsg}' replyCmd:'{replyCmd}' \n           txTimeout:{txTimeout} Transmitting:{transmitting} Mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} check:{smsg.Check} dblClk:{dblClk}";
-                    if (curStatus != lastStatus)
-                    {
-                        DebugOutput($"{Time()}\n{curStatus}");
-                        lastStatus = curStatus;
-                    }
-                    //status-related action(s) follow
-
                     //check for setup for CQ
                     if (commConfirmed && myCall != null && supportedModes.Contains(mode) && (mode != "FT8" || specOp == 0) && opMode == OpModes.START)
                     {
@@ -821,8 +820,7 @@ namespace WSJTX_Controller
                         DebugOutput($"{Time()} opMode:{opMode}");
                         ShowStatus();
                         UpdateAddCall();
-                        //string curStatus = $"Status    qsoState:{qsoState} lastTxMsg:{smsg.LastTxMsg} txEnabled:{txEnabled} txMsg:'{txMsg}' txTimeout:{txTimeout} transmitting:{transmitting} mode:{mode}";
-                        //DebugOutput(curStatus);
+
                         //setup for CQ
                         emsg.NewTxMsgIdx = 6;
                         emsg.GenMsg = $"CQ{NextDirCq()} {myCall} {myGrid}";
@@ -836,7 +834,10 @@ namespace WSJTX_Controller
                         callInProg = null;
                         DebugOutput($"{spacer}qsoState:{qsoState} (was {lastQsoState}) callInProg:'{callInProg}'");
                         curCmd = emsg.GenMsg;
+                        DebugOutput($"{Time()}\nStatus     {CurrentStatus()}");
                     }
+
+                    //*****end of status *****
                     UpdateDebug();
                     return;
                 }
@@ -850,7 +851,6 @@ namespace WSJTX_Controller
             int cycleTimerAdj = (mode == "FT8" ? 300 : (mode == "FT4" ? 500 : 0));      //msec
             ctrl.timer2.Interval = (2 * (int)trPeriod) - diffMsec - cycleTimerAdj;
             ctrl.timer2.Start();
-            DebugOutput($"\n{Time()} StartTimer2: interval:{ctrl.timer2.Interval} msec");
         }
 
         private bool CheckMyCall(StatusMessage smsg)
@@ -883,14 +883,15 @@ namespace WSJTX_Controller
             //Timeout processing
             //******************
             //check for time to initiate next xmit from queued calls
-            if (txTimeout)        //important to sync qso logged to end of xmit
+            if (txTimeout || (callAddedManual && autoCalling && callQueue.Count > 0 && qsoState == WsjtxMessage.QsoStates.CALLING))        //important to sync qso logged to end of xmit, and manually-added call(s) to status msgs
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
                 replyDecode = null;
-                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:'{tCall}' newDirCq:{newDirCq}");
+                DebugOutput($"{Time()} CheckNextXmit(1) start: txTimeout:{txTimeout} tCall:{tCall}");
+                DebugOutputStatus();
                 //check for call sign in process timed out and must be removed;
                 //dictionary won't contain data for this call sign if QSO handled only by WSJT-X
-                if (tCall != null)     //null if call added manually, and must be processed here
+                if (tCall != null)     //null if call added manually, otherwise is timed out and queue updated here
                 {
                     DebugOutput($"{spacer}'{tCall}' might be in process but timed out");
                     RemoveCall(tCall);
@@ -946,7 +947,9 @@ namespace WSJTX_Controller
                 txTimeout = false;              //ready for next timeout
                 qsoLogged = false;              //clear "logged" status
                 autoCalling = true;
-                DebugOutput($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} qsoLogged:{qsoLogged} newDirCq:{newDirCq} autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                callAddedManual = false;
+                DebugOutputStatus();
+                DebugOutput($"{Time()} CheckNextXmit end");
                 UpdateDebug();      //unconditional
                 return;             //don't process newDirCq
             }
@@ -956,8 +959,7 @@ namespace WSJTX_Controller
             //************************************
             if (qsoState == WsjtxMessage.QsoStates.CALLING && newDirCq)
             {
-                DebugOutput($"{Time()} CheckNextXmit start, txTimeout:{txTimeout} replyCmd:'{replyCmd}' tCall:'{tCall}' newDirCq:{newDirCq}");
-                DebugOutput($"{spacer}New directed CQ, qsoState:{qsoState}, start CQing");
+                DebugOutput($"{Time()} CheckNextXmit(2) start");
                 emsg.NewTxMsgIdx = 6;
                 emsg.GenMsg = $"CQ{NextDirCq()} {myCall} {myGrid}";
                 emsg.SkipGrid = ctrl.skipGridCheckBox.Checked;
@@ -972,8 +974,8 @@ namespace WSJTX_Controller
                 curCmd = emsg.GenMsg;
                 newDirCq = false;
                 callInProg = null;
-                DebugOutput($"{spacer}qsoState:{qsoState} (was {lastQsoState} replyCmd:'{replyCmd}')");
-                DebugOutput($"{Time()} CheckNextXmit end, txTimeout:{txTimeout} qsoLogged:{qsoLogged} newDirCq:{newDirCq} autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                DebugOutputStatus();
+                DebugOutput($"{Time()} CheckNextXmit end");
                 UpdateDebug();      //unconditional
                 return;
             }
@@ -982,7 +984,7 @@ namespace WSJTX_Controller
         public void ProcessDecodes()
         {
             ctrl.timer2.Stop();
-            DebugOutput($"\n{Time()} ProcessDecodes: txEnabled:{txEnabled} txTimeout:{txTimeout} dxCall:'{dxCall}' lastDxCall:'{lastDxCall}' txMsg:'{txMsg}'\n           replyCmd:'{replyCmd}' curCmd:'{curCmd}' dblClk:{dblClk}");
+            DebugOutput($"\n{Time()} ProcessDecodes:");
             //check for Tx started manually during Rx
             if (txEnabled) CheckNextXmit();
             DebugOutput($"{Time()} ProcessDecodes done\n");
@@ -995,7 +997,8 @@ namespace WSJTX_Controller
             string lastToCall = WsjtxMessage.ToCall(lastTxMsg);
             callInProg = null;
             if (toCall != "CQ") callInProg = toCall;
-            DebugOutput($"{Time()} Tx start: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}' callInProg:'{callInProg}'\n           replyCmd:'{replyCmd}' qsoLogged:{qsoLogged} autoCalling:{autoCalling}");
+            DebugOutput($"\n{Time()} Tx start: toCall:'{toCall}' lastToCall:'{lastToCall}' timer2 interval:{ctrl.timer2.Interval} msec");
+            DebugOutputStatus();
 
             //check for time to log early
             //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
@@ -1029,7 +1032,8 @@ namespace WSJTX_Controller
             string deCall = WsjtxMessage.DeCall(replyCmd);
             string cmdToCall = WsjtxMessage.ToCall(curCmd);
 
-            DebugOutput($"\n{Time()} Tx end: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' tCall:'{tCall}' callInProg:'{callInProg}' autoCalling:{autoCalling}\n           toCall:'{toCall}' lastToCall:'{lastToCall}' replyCmd:'{replyCmd}' deCall:'{deCall}' qsoLogged:{qsoLogged}\n           curCmd:{curCmd} cmdToCall:'{cmdToCall}'");
+            DebugOutput($"\n{Time()} Tx end: toCall:'{toCall}' lastToCall:'{lastToCall}' deCall:'{deCall}' cmdToCall:'{cmdToCall}'");
+            DebugOutputStatus();
             //could have clicked on "CQ" button in WSJT-X
             if (toCall == "CQ")
             {
@@ -1094,7 +1098,7 @@ namespace WSJTX_Controller
                         txTimeout = true;
                         autoCalling = true;
                         callInProg = null;
-                        tCall = WsjtxMessage.ToCall(lastTxMsg);        //will be null if non-std msg
+                        tCall = WsjtxMessage.ToCall(lastTxMsg);        //call to remove from queue, will be null if non-std msg
                         DebugOutput($"{Time()} Reset(3) (timeout) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} tCall:'{tCall}' autoCalling:{autoCalling} callInProg:'{callInProg}'");
                     }
                 }
@@ -1119,7 +1123,8 @@ namespace WSJTX_Controller
                 DebugOutput($"{Time()} Reset(5) (new directed CQ, or setting changed) xmitCycleCount:{xmitCycleCount} newDirCq:{newDirCq}");
             }
 
-            DebugOutput($"{Time()} Tx end done: xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'\n           tCall:'{tCall}' qsoLogged:{qsoLogged} callInProg:'{callInProg} autoCalling:{autoCalling}'\n");
+            DebugOutputStatus();
+            DebugOutput($"{Time()} Tx end done\n");
             ShowTimeout();
             UpdateDebug();      //unconditional
         }
@@ -1654,11 +1659,10 @@ private bool RemoveCall(string call)
                 //get actual message to reply to
                 AddCall(deCall, emsg);              //add to call queue
 
-                if (txEnabled && autoCalling && callQueue.Count == 1 && qsoState == WsjtxMessage.QsoStates.CALLING)  //stops CQing, starts the first xmit at next decode/status/heartbeat msg
+                if (txEnabled)  //might stop CQing, starts the first xmit at later status msg
                 {
-                    txTimeout = true;
-                    callInProg = null;
-                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
+                    callAddedManual = true;         //need to sync with status update(s)
+                    DebugOutput($"{spacer}callAddedManual:{callAddedManual}");
                 }
                 Play("blip.wav");
             }
@@ -2042,6 +2046,16 @@ private bool RemoveCall(string call)
                 reportList.Remove(call);
                 DebugOutput($"{spacer} removed '{call}' from reportList");
             }
+        }
+
+        private string CurrentStatus()
+        {
+            return $"myCall:'{myCall}' callInProg:'{callInProg}' qsoState:{qsoState} lastQsoState:{lastQsoState} txMsg:'{txMsg}'\n           lastTxMsg:'{lastTxMsg}' replyCmd:'{replyCmd}' curCmd:'{curCmd}'\n           txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} transmitting:{transmitting} mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} dblClk:{dblClk} callAddedManual:{callAddedManual}\n           newDirCq:{newDirCq} tCall:'{tCall}'  qCall:'{qCall}'  qsoLogged:{qsoLogged}  decoding:{decoding}\n           {CallQueueString()}";
+        }
+
+        private void DebugOutputStatus()
+        {
+            DebugOutput($"Now:       {CurrentStatus()}");
         }
     }   
  
