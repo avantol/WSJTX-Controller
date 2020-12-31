@@ -368,9 +368,9 @@
             // directedTextBox
             // 
             this.directedTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.directedTextBox.Location = new System.Drawing.Point(136, 77);
+            this.directedTextBox.Location = new System.Drawing.Point(138, 77);
             this.directedTextBox.Name = "directedTextBox";
-            this.directedTextBox.Size = new System.Drawing.Size(109, 20);
+            this.directedTextBox.Size = new System.Drawing.Size(107, 20);
             this.directedTextBox.TabIndex = 23;
             this.directedTextBox.Text = "(separate by spaces)";
             this.directedTextBox.Visible = false;
@@ -391,7 +391,7 @@
             // loggedCheckBox
             // 
             this.loggedCheckBox.AutoSize = true;
-            this.loggedCheckBox.Location = new System.Drawing.Point(138, 103);
+            this.loggedCheckBox.Location = new System.Drawing.Point(139, 103);
             this.loggedCheckBox.Name = "loggedCheckBox";
             this.loggedCheckBox.Size = new System.Drawing.Size(117, 17);
             this.loggedCheckBox.TabIndex = 21;
@@ -402,7 +402,7 @@
             // alertCheckBox
             // 
             this.alertCheckBox.AutoSize = true;
-            this.alertCheckBox.Location = new System.Drawing.Point(27, 282);
+            this.alertCheckBox.Location = new System.Drawing.Point(26, 282);
             this.alertCheckBox.Name = "alertCheckBox";
             this.alertCheckBox.Size = new System.Drawing.Size(126, 17);
             this.alertCheckBox.TabIndex = 19;
@@ -414,9 +414,9 @@
             // alertTextBox
             // 
             this.alertTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.alertTextBox.Location = new System.Drawing.Point(152, 280);
+            this.alertTextBox.Location = new System.Drawing.Point(154, 280);
             this.alertTextBox.Name = "alertTextBox";
-            this.alertTextBox.Size = new System.Drawing.Size(109, 20);
+            this.alertTextBox.Size = new System.Drawing.Size(107, 20);
             this.alertTextBox.TabIndex = 20;
             this.alertTextBox.Text = "(separate by spaces)";
             this.alertTextBox.Visible = false;
@@ -425,7 +425,7 @@
             // mycallCheckBox
             // 
             this.mycallCheckBox.AutoSize = true;
-            this.mycallCheckBox.Location = new System.Drawing.Point(27, 258);
+            this.mycallCheckBox.Location = new System.Drawing.Point(26, 258);
             this.mycallCheckBox.Name = "mycallCheckBox";
             this.mycallCheckBox.Size = new System.Drawing.Size(117, 17);
             this.mycallCheckBox.TabIndex = 7;
@@ -476,9 +476,9 @@
             this.addCallLabel.ForeColor = System.Drawing.Color.Blue;
             this.addCallLabel.Location = new System.Drawing.Point(121, 11);
             this.addCallLabel.Name = "addCallLabel";
-            this.addCallLabel.Size = new System.Drawing.Size(52, 13);
+            this.addCallLabel.Size = new System.Drawing.Size(51, 13);
             this.addCallLabel.TabIndex = 36;
-            this.addCallLabel.Text = "Add more";
+            this.addCallLabel.Text = "More info";
             this.addCallLabel.Click += new System.EventHandler(this.addCallLabel_Click);
             // 
             // label3

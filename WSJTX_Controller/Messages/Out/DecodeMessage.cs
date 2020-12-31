@@ -125,6 +125,7 @@ namespace WsjtxUdpLib.Messages.Out
         public double DeltaTime { get; set; }
         public int DeltaFrequency { get; set; }
         public string Mode { get; set; }
+        public bool Priority { get; set; }
         //  0     1    2      idx
         //K9AVT K4SV R-03
         //01234567890123456789012345678901234567890 posn
@@ -221,6 +222,7 @@ namespace WsjtxUdpLib.Messages.Out
 
             decodeMessage.UseStdReply = false; //used in ReplyToCq, was: DecodeBool(message, ref cur);
             decodeMessage.OffAir = DecodeBool(message, ref cur);
+            decodeMessage.Priority = false;
 
             //decodeMessage.messageWords = decodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -278,6 +280,7 @@ namespace WsjtxUdpLib.Messages.Out
             enqueueDecodeMessage.UseStdReply = false;  //used in ReplyToCq
             DecodeBool(message, ref cur);              //skip over
             enqueueDecodeMessage.Modifier = DecodeBool(message, ref cur);
+            enqueueDecodeMessage.Priority = false;
 
             //enqueueDecodeMessage.messageWords = enqueueDecodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 

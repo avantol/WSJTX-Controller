@@ -407,7 +407,7 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"To add call signs to the reply list:{Environment.NewLine}- Press and hold the 'Alt' key, then{Environment.NewLine}- Double-click on that line in the 'Band Activity' list.{Environment.NewLine}{Environment.NewLine}Also try this:{Environment.NewLine}When you see a station others are calling to (like a rare DX!), to switch *immediately* to calling that station:{Environment.NewLine}- Press and hold the 'Ctrl' and 'Alt' keys, then{Environment.NewLine}- Double-click on any line in the 'Band Activity' list where that station is being called.{Environment.NewLine}{Environment.NewLine}Avoid double-clicking on calls in the 'Band Activity list *without* using the 'Alt' key:{Environment.NewLine}- This causes an immediate reply, instead of placing the call on a list of calls to reply to (which is partly the purpose of this program!)",
+                  $"The calls that are directed to you are automatically placed on the call reply list.\n\nTo manually add more call signs to the reply list:{Environment.NewLine}- Press and hold the 'Alt' key, then{Environment.NewLine}- Double-click on the line containing the desired 'from' call sign in the 'Band Activity' list.{Environment.NewLine}{Environment.NewLine}Also try this:{Environment.NewLine}When you see a station others are calling to (like a rare DX!), to switch *immediately* to calling that station:{Environment.NewLine}- Press and hold the 'Ctrl' and 'Alt' keys, then{Environment.NewLine}- Double-click on any line in the 'Band Activity' list where that station is the 'to' call sign.{Environment.NewLine}{Environment.NewLine}When you double-click on a call in the 'Band Activity list *without* using the 'Alt' key:{Environment.NewLine}- This causes an immediate reply, instead of placing the call on a list of calls to reply to.\n- Automatic operation continues after this call is processed.\n\nOne last note:\n- Stations that are currently calling you have priority over the call signs you've added manually to the reply list.\n- This assures that the calling stations get answered promptly, and the replying to manually added call signs can wait for when there's less activity.\n\nYou can leave this dialog open while you try out these hints.",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
@@ -417,7 +417,21 @@ namespace WSJTX_Controller
 
         public void ShowMsg(string text, bool sound)
         {
-            if (sound) SystemSounds.Beep.Play();
+            if (sound)
+            {
+                if (text.Contains("Not ready") && wsjtxClient.myCall == "K0LW")
+                {
+                    wsjtxClient.Play("dive.wav");
+                    text = "Not yet, Lee!";
+                }
+                else
+                {
+                    SystemSounds.Beep.Play();
+                }
+            }
+                
+                
+                
             if (errDlg != null)
             {
                 errDlg.Close();
@@ -471,7 +485,7 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"To maximize the chance of completed QSOs, consider 'early logging':{Environment.NewLine}{Environment.NewLine}The defining requirement for any QSO is the exchange of call signs and signal reports.{Environment.NewLine}Once either party sends an 'RRR' message, those requirements have been met... a '73' is not necessary for logging the QSO.{Environment.NewLine}{Environment.NewLine}Note that the QSO will continue after early logging, completing when 'RR73' or '73' is sent, or '73' is received.",
+                  $"To maximize the chance of completed QSOs, consider 'early logging':{Environment.NewLine}{Environment.NewLine}The defining requirement for any QSO is the exchange of call signs and signal reports.{Environment.NewLine}Once either party sends an 'RRR' message (and reports have been exchanged), those requirements have been met... a '73' is not necessary for logging the QSO.{Environment.NewLine}{Environment.NewLine}Note that the QSO will continue after early logging, completing when 'RR73' or '73' is sent, or '73' is received.",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information

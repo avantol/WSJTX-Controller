@@ -34,7 +34,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/230", "2.3.0-rc2/104", "2.3.0-rc2/105" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/231", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         private bool logToFile = false;
@@ -43,7 +43,7 @@ namespace WSJTX_Controller
         private bool settingChanged = false;
         private string cmdCheck = "";
         private bool commConfirmed = false;
-        private string myCall = null, myGrid = null;
+        public string myCall = null, myGrid = null;
         private Dictionary<string, DecodeMessage> callDict = new Dictionary<string, DecodeMessage>();
         private Queue<string> callQueue = new Queue<string>();
         private List<string> reportList = new List<string>();
@@ -471,8 +471,9 @@ namespace WSJTX_Controller
                                 //check for decode being a call to myCall
                                 if  (myCall != null && dmsg.IsCallTo(myCall))
                                 {
+                                    dmsg.Priority = true;       //as opposed to a decode from anyone else
                                     UpdateDebug();
-                                    if (deCall != qCall && ctrl.mycallCheckBox.Checked) Play("trumpet.wav");   //not the call just logged
+                                    if (ctrl.mycallCheckBox.Checked) Play("trumpet.wav");   //not the call just logged
 
                                     //if call not logged: save Report (...+03) and RogerReport (...-02) decodes for out-of-order call processing
                                     if (!logList.Contains(deCall) && WsjtxMessage.IsReport(dmsg.Message) || WsjtxMessage.IsRogerReport(dmsg.Message))
@@ -1065,7 +1066,7 @@ namespace WSJTX_Controller
                 xmitCycleCount = 0;
                 autoCalling = true;
                 callInProg = null;
-                DebugOutput($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged} autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                DebugOutput($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}\n           autoCalling:{autoCalling} callInProg:'{callInProg}'");
                 //NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
                 if (!qsoLogged)
                 {
@@ -1283,7 +1284,10 @@ private bool RemoveCall(string call)
             return false;
         }
 
-        //add call to queue/dict
+        //add call/decode to queue/dict;
+        //priority decodes (to myCall) move toward the head of the queue
+        //because non-priority calls are added manually to queue (i.e., not rec'd, prospective for QSO)
+        //but priority calls are decoded calls to myCall (i.e., rec'd and immediately ready for QSO);
         //return false if already added
         private bool AddCall(string call, DecodeMessage msg)
         {
@@ -1291,9 +1295,41 @@ private bool RemoveCall(string call)
             DecodeMessage dmsg;
             if (!callDict.TryGetValue(call, out dmsg))     //dictionary does not contain call data for this call sign
             {
-                callQueue.Enqueue(call);
-                callDict.Add(call, msg);
+                if (msg.Priority)           //may need to insert this priority call ahead of non-priority calls
+                {
+                    var callArray = callQueue.ToArray();        //make accessible
+                    var tmpQueue = new Queue<string>();         //will be the updated queue
 
+                    //go thru calls in reverse time order
+                    int i;
+                    for (i = 0; i < callArray.Length; i++)
+                    {
+                        DecodeMessage decode;
+                        callDict.TryGetValue(callArray[i], out decode);     //get the decode for an existing call in the queue
+                        if (!decode.Priority)               //reached the end of priority calls (if any)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            tmpQueue.Enqueue(callArray[i]); //add the existing priority call 
+                        }
+                    }
+                    tmpQueue.Enqueue(call);         //add the new priority call (before oldest non-priority call, or at end of all-priority-call queue)
+
+                    //fill in the remaining non-priority callls
+                    for (int j = i; j < callArray.Length; j++)
+                    {
+                        tmpQueue.Enqueue(callArray[j]);
+                    }
+                    callQueue = tmpQueue;
+                }
+                else            //is a non-priority call, add to end of all calls
+                {
+                    callQueue.Enqueue(call);
+                }
+
+                callDict.Add(call, msg);
                 ShowQueue();
                 DebugOutput($"{Time()} Enqueued {call}: {CallQueueString()} {CallDictString()}");
                 return true;
