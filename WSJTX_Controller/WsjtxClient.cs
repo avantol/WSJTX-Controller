@@ -1577,12 +1577,12 @@ private bool RemoveCall(string call)
             if (!emsg.Modifier && IsEvenPeriod(emsg.SinceMidnight.Seconds * 1000) == txFirst) 
             {
                 string s = txFirst ? "odd" : "even/1st";
-                ctrl.ShowMsg($"Select calls in the '{s}' sequence(s)", true);
+                ctrl.ShowMsg($"Select calls in '{s}' sequence", true);
                 return;
             }
             if (msg.Contains("..."))
             {
-                ctrl.ShowMsg("Can't add call from hashed message", true);
+                ctrl.ShowMsg("Can't add call from hashed msg", true);
                 return;
             }
 
@@ -1591,7 +1591,7 @@ private bool RemoveCall(string call)
 
             if (deCall == null)
             {
-                ctrl.ShowMsg("No 'from' call in this message", true);
+                ctrl.ShowMsg("No 'from' call in message", true);
                 return;
             }
 
@@ -1604,7 +1604,7 @@ private bool RemoveCall(string call)
                 }
                 if (toCall == null)
                 {
-                    ctrl.ShowMsg("No 'to' call in this message", true);
+                    ctrl.ShowMsg("No 'to' call in message", true);
                     return;
                 }
                 if (toCall == myCall)
@@ -1646,7 +1646,7 @@ private bool RemoveCall(string call)
             {
                 if (callQueue.Contains(deCall))
                 {
-                    ctrl.ShowMsg($"{deCall} is already in the call list", true);
+                    ctrl.ShowMsg($"{deCall} already on call list", true);
                     return;
                 }
                 if (txEnabled && deCall == callInProg)
