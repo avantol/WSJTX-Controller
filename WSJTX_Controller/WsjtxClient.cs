@@ -70,7 +70,6 @@ namespace WSJTX_Controller
         private string configuration = null;
         private TimeSpan latestDecodeTime;
         private string callInProg = null;
-        private bool callAddedManual = false;
 
         private WsjtxMessage.QsoStates lastQsoState = WsjtxMessage.QsoStates.INVALID;
         private UdpClient udpClient2;
@@ -676,6 +675,7 @@ namespace WSJTX_Controller
                             }
                         }
                         autoCalling = false;
+                        ShowStatus();
                         DebugOutput($"{Time()}\nStatus     {CurrentStatus()}");
                     }
                     if (!autoCalling)
@@ -871,7 +871,7 @@ namespace WSJTX_Controller
             //Timeout processing
             //******************
             //check for time to initiate next xmit from queued calls
-            if (txTimeout || (callAddedManual && autoCalling && callQueue.Count > 0 && qsoState == WsjtxMessage.QsoStates.CALLING))        //important to sync qso logged to end of xmit, and manually-added call(s) to status msgs
+            if (txTimeout || (autoCalling && callQueue.Count > 0 && qsoState == WsjtxMessage.QsoStates.CALLING))        //important to sync qso logged to end of xmit, and manually-added call(s) to status msgs
             {
                 replyCmd = null;        //last reply cmd sent is no longer in effect
                 replyDecode = null;
@@ -935,7 +935,6 @@ namespace WSJTX_Controller
                 txTimeout = false;              //ready for next timeout
                 qsoLogged = false;              //clear "logged" status
                 autoCalling = true;
-                callAddedManual = false;
                 DebugOutputStatus();
                 DebugOutput($"{Time()} CheckNextXmit end");
                 UpdateDebug();      //unconditional
@@ -1676,11 +1675,6 @@ private bool RemoveCall(string call)
                 //get actual message to reply to
                 AddCall(deCall, emsg);              //add to call queue
 
-                if (txEnabled)  //might stop CQing, starts the first xmit at later status msg
-                {
-                    callAddedManual = true;         //need to sync with status update(s)
-                    DebugOutput($"{spacer}callAddedManual:{callAddedManual}");
-                }
                 Play("blip.wav");
             }
             UpdateDebug();
@@ -2067,7 +2061,7 @@ private bool RemoveCall(string call)
 
         private string CurrentStatus()
         {
-            return $"myCall:'{myCall}' callInProg:'{callInProg}' qsoState:{qsoState} lastQsoState:{lastQsoState} txMsg:'{txMsg}'\n           lastTxMsg:'{lastTxMsg}' replyCmd:'{replyCmd}' curCmd:'{curCmd}'\n           txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} transmitting:{transmitting} mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} dblClk:{dblClk} callAddedManual:{callAddedManual}\n           newDirCq:{newDirCq} tCall:'{tCall}'  qCall:'{qCall}'  qsoLogged:{qsoLogged}  decoding:{decoding}\n           {CallQueueString()}";
+            return $"myCall:'{myCall}' callInProg:'{callInProg}' qsoState:{qsoState} lastQsoState:{lastQsoState} txMsg:'{txMsg}'\n           lastTxMsg:'{lastTxMsg}' replyCmd:'{replyCmd}' curCmd:'{curCmd}'\n           txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} transmitting:{transmitting} mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} dblClk:{dblClk}\n           newDirCq:{newDirCq} tCall:'{tCall}'  qCall:'{qCall}'  qsoLogged:{qsoLogged}  decoding:{decoding}\n           {CallQueueString()}";
         }
 
         private void DebugOutputStatus()
