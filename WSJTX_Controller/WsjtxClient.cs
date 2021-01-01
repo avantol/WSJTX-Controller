@@ -34,7 +34,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/231", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/232", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         private bool logToFile = false;
@@ -306,8 +306,6 @@ namespace WSJTX_Controller
                 //File.WriteAllBytes($"{ex.MessageType}.couldnotparse.bin", ex.Datagram);
                 DebugOutput($"{Time()} ERROR: Parse failure {ex.InnerException.Message}");
                 DebugOutput($"datagram[{datagram.Length}]: {DatagramString(datagram)}");
-                errorDesc = "Parse fail {ex.MessageType}";
-                UpdateDebug();
                 return;
             }
 
@@ -1975,7 +1973,7 @@ private bool RemoveCall(string call)
             return WsjtxMessage.IsReport(msg.Message);
         }
 
-        //log a QSO directly to the WSJT-X .ADI log file
+        //log a QSO directly to the WSJT-X .ADI log file and to WSJT-X to re-broadcast
         private void LogDirect(string call, DecodeMessage reptMsg, DecodeMessage lateMsg)
         {
             if (!File.Exists(WsjtxLogPathFilename)) return;
@@ -1995,15 +1993,19 @@ private bool RemoveCall(string call)
             string freq = (dialFrequency + txOffset / 1e6).ToString("F6");
             string band = FreqToBand(dialFrequency / 1e6);
 
-            string logLine = $"<call:{call.Length}>{call}  <gridsquare:0> <mode:{mode.Length}>{mode} <rst_sent:{rstSent.Length}>{rstSent} <rst_rcvd:{rstRecd.Length}>{rstRecd} <qso_date:{qsoDateOn.Length}>{qsoDateOn} <time_on:{qsoTimeOn.Length}>{qsoTimeOn} <qso_date_off:{qsoDateOff.Length}>{qsoDateOff} <time_off:{qsoTimeOff.Length}>{qsoTimeOff} <band:{band.Length}>{band} <freq:{freq.Length}>{freq} <station_callsign:{myCall.Length}>{myCall} <my_gridsquare:{myGrid.Length}>{myGrid} <eor>";
+            string adifRecord = $"<call:{call.Length}>{call}  <gridsquare:0> <mode:{mode.Length}>{mode} <rst_sent:{rstSent.Length}>{rstSent} <rst_rcvd:{rstRecd.Length}>{rstRecd} <qso_date:{qsoDateOn.Length}>{qsoDateOn} <time_on:{qsoTimeOn.Length}>{qsoTimeOn} <qso_date_off:{qsoDateOff.Length}>{qsoDateOff} <time_off:{qsoTimeOff.Length}>{qsoTimeOff} <band:{band.Length}>{band} <freq:{freq.Length}>{freq} <station_callsign:{myCall.Length}>{myCall} <my_gridsquare:{myGrid.Length}>{myGrid} <eor>";
 
-            int retry = 3;
+            //send ADIF record to WSJT-X for re-broadcast to logging pgms
+            LogToSecondaryUdp(adifRecord);
+
+            //send ADIF record to the WSJT-X log file
+            int retry = 3;          //file could be in use/locked
             while (true)
             {
                 try
                 {
                     StreamWriter lsw = File.AppendText(WsjtxLogPathFilename);
-                    lsw.WriteLine(logLine);
+                    lsw.WriteLine(adifRecord);
                     lsw.Close();
                     break;
                 }
@@ -2102,6 +2104,19 @@ private bool RemoveCall(string call)
                 delim = " ";
             }
             return sb.ToString();
+        }
+
+        //send ADIF record to WSJT-X for re-broadcast to logging pgms
+        private void LogToSecondaryUdp(string logLine)
+        {
+            emsg.NewTxMsgIdx = 255;     //function code
+            emsg.GenMsg = logLine;
+            emsg.SkipGrid = false;      //no effect
+            emsg.UseRR73 = false;      //no effect
+            emsg.CmdCheck = cmdCheck;
+            ba = emsg.GetBytes();
+            udpClient2.Send(ba, ba.Length);
+            DebugOutput($"{Time()} >>>>>Sent 'Broadcast' cmd:255 cmdCheck:{cmdCheck}\n{emsg}");
         }
     }   
 }
