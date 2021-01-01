@@ -167,10 +167,11 @@ namespace WsjtxUdpLib.Messages.Out
             return words[2].Replace("R", "");
         }
 
-        public static void Reinit() {
+        public static void Reinit()
+        {
             NegotiatedSchemaVersion = 2;
-            NegoState = (int)NegoStates.INITIAL;
-            }
+            NegoState = NegoStates.INITIAL;
+        }
         
         public static WsjtxMessage Parse(byte[] datagram)
         {

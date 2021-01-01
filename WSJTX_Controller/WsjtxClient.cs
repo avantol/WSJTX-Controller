@@ -150,8 +150,8 @@ namespace WSJTX_Controller
             string fileVer = $"{v.Major}.{v.Minor}.{v.Build}";
             WsjtxMessage.PgmVersion = fileVer;
             debug = reqDebug;
-            //opMode = OpModes.IDLE;
-            //WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
+            opMode = OpModes.IDLE;
+            WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
             pgmName = ctrl.Text;      //or Assembly.GetExecutingAssembly().GetName().ToString();
 
             logToFile = (DateTime.Now - firstRunDateTime).TotalDays < 28;
@@ -163,7 +163,7 @@ namespace WSJTX_Controller
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
                     sw = File.AppendText($"{path}\\log_{DateTime.Now.Date.ToShortDateString().Replace('/', '-')}.txt");
                     sw.AutoFlush = true;
-                    DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting....");
+                    DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting.... ipAddress:{ipAddress} port:{port} multicast:{multicast}");
                 }
                 catch (Exception err)
                 {
@@ -198,10 +198,10 @@ namespace WSJTX_Controller
                 return;
             }
 
-            asyncCallback = new AsyncCallback(ReceiveCallback);
             s = new UdpState();
             s.e = endPoint;
             s.u = udpClient;
+            asyncCallback = new AsyncCallback(ReceiveCallback);
 
             DebugOutput($"{Time()} NegoState:{WsjtxMessage.NegoState}");
             DebugOutput($"{Time()} opMode:{opMode}");
@@ -299,14 +299,21 @@ namespace WSJTX_Controller
             try
             {
                 msg = WsjtxMessage.Parse(datagram);
-                //DebugOutput($"{Time()} msg:{msg}");
+                //DebugOutput($"{Time()} msg:{msg} datagram[{datagram.Length}]:\n{DatagramString(datagram)}");
             }
             catch (ParseFailureException ex)
             {
-                File.WriteAllBytes($"{ex.MessageType}.couldnotparse.bin", ex.Datagram);
-                DebugOutput($"{Time()} Parse failure for {ex.MessageType}: {ex.InnerException.Message}");
+                //File.WriteAllBytes($"{ex.MessageType}.couldnotparse.bin", ex.Datagram);
+                DebugOutput($"{Time()} ERROR: Parse failure {ex.InnerException.Message}");
+                DebugOutput($"datagram[{datagram.Length}]: {DatagramString(datagram)}");
                 errorDesc = "Parse fail {ex.MessageType}";
                 UpdateDebug();
+                return;
+            }
+
+            if (msg == null)
+            {
+                DebugOutput($"{Time()} ERROR: null message, datagram[{datagram.Length}]: {DatagramString(datagram)}");
                 return;
             }
 
@@ -1157,7 +1164,7 @@ namespace WSJTX_Controller
         private void ResetNego()
         {
             ResetOpMode();
-            WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
+            WsjtxMessage.Reinit();                      //NegoState = INITIAL;
             DebugOutput($"\n\n{Time()} opMode:{opMode} NegoState:{WsjtxMessage.NegoState}");
             DebugOutput($"{Time()} Waiting for heartbeat...");
             cmdCheck = RandomCheckString();
@@ -2082,6 +2089,19 @@ private bool RemoveCall(string call)
                 failReason = $"{s}{mode} mode not supported";
             }
             ShowStatus();
+        }
+
+        private string DatagramString(byte[] datagram)
+        {
+            var sb = new StringBuilder();
+            string delim = "";
+            for (int i = 0; i < datagram.Length; i++)
+            {
+                sb.Append(delim);
+                sb.Append(datagram[i].ToString("X2"));
+                delim = " ";
+            }
+            return sb.ToString();
         }
     }   
 }
