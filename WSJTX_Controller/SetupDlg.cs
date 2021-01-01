@@ -52,6 +52,7 @@ namespace WSJTX_Controller
                 MessageBox.Show($"An IP address must be 4 numbers between 0 and 255, each separated by a period.\n\nExample: {ex}", wsjtxClient.pgmName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+
             try
             {
                 ipAddress = IPAddress.Parse(addrTextBox.Text);
@@ -63,7 +64,7 @@ namespace WSJTX_Controller
                 MessageBox.Show($"An IP address must be 4 numbers between 0 and 255, each separated by a period.\n\nExample: {ex}", wsjtxClient.pgmName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-
+            /*
             try
             {
                 if (multicast)
@@ -95,6 +96,7 @@ namespace WSJTX_Controller
                 portTextBox.Text = "2237";
                 return;
             }
+            */
 
             //if no change, no need to notify
             if (wsjtxClient.ipAddress.ToString() == ipAddress.ToString() && wsjtxClient.port == port && wsjtxClient.multicast == multicast)
