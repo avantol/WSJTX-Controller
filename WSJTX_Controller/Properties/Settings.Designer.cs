@@ -229,7 +229,7 @@ namespace WSJTX_Controller.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public string configsChecked {
             get {
                 return ((string)(this["configsChecked"]));
@@ -247,6 +247,18 @@ namespace WSJTX_Controller.Properties {
             }
             set {
                 this["firstRunDateTime"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool autoReplyCq {
+            get {
+                return ((bool)(this["autoReplyCq"]));
+            }
+            set {
+                this["autoReplyCq"] = value;
             }
         }
     }

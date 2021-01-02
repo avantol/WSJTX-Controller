@@ -233,6 +233,8 @@ namespace WsjtxUdpLib.Messages.Out
     public class EnqueueDecodeMessage : DecodeMessage
     {
         public bool Modifier { get; set; }
+        public bool AutoGen { get; set; }
+        public bool IsDx { get; set; }
 
         public static new WsjtxMessage Parse(byte[] message)
         {
@@ -254,7 +256,7 @@ namespace WsjtxUdpLib.Messages.Out
             }
 
             enqueueDecodeMessage.Id = DecodeString(message, ref cur);
-            enqueueDecodeMessage.New = DecodeBool(message, ref cur);
+            enqueueDecodeMessage.AutoGen = DecodeBool(message, ref cur);
             enqueueDecodeMessage.SinceMidnight = DecodeQTime(message, ref cur);
             enqueueDecodeMessage.RxDate = DateTime.UtcNow.Date;
             enqueueDecodeMessage.Snr = DecodeQInt32(message, ref cur);
@@ -278,9 +280,9 @@ namespace WsjtxUdpLib.Messages.Out
             enqueueDecodeMessage.Message = RemoveAngleBrackets(enqueueDecodeMessage.Message);
 
             enqueueDecodeMessage.UseStdReply = false;  //used in ReplyToCq
-            DecodeBool(message, ref cur);              //skip over
+            enqueueDecodeMessage.IsDx = DecodeBool(message, ref cur);
             enqueueDecodeMessage.Modifier = DecodeBool(message, ref cur);
-            enqueueDecodeMessage.Priority = false;
+            enqueueDecodeMessage.Priority = false;      //set here temporarily
 
             //enqueueDecodeMessage.messageWords = enqueueDecodeMessage.Message.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 

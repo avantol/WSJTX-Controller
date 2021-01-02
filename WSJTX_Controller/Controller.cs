@@ -115,6 +115,8 @@ namespace WSJTX_Controller
             wsjtxClient.advanced = Properties.Settings.Default.advanced;
             useRR73CheckBox.Checked = Properties.Settings.Default.useRR73;
             skipGridCheckBox.Checked = Properties.Settings.Default.skipGrid;
+            replyCqCheckBox.Checked = Properties.Settings.Default.autoReplyCq;
+            replyCqCheckBox_Click(null, null);
 
             alertTextBox.Enabled = alertCheckBox.Checked;
             alertTextBox.ForeColor = System.Drawing.Color.Gray;
@@ -174,6 +176,7 @@ namespace WSJTX_Controller
             Properties.Settings.Default.useRR73 = useRR73CheckBox.Checked;
             Properties.Settings.Default.skipGrid = skipGridCheckBox.Checked;
             Properties.Settings.Default.firstRunDateTime = wsjtxClient.firstRunDateTime;
+            Properties.Settings.Default.autoReplyCq = replyCqCheckBox.Checked;
 
             Properties.Settings.Default.Save();
             CloseComm();
@@ -355,6 +358,11 @@ namespace WSJTX_Controller
             useRR73CheckBox.Visible = true;
             skipGridCheckBox.Visible = true;
             addCallLabel.Visible = false;
+            replyCqCheckBox.Visible = true;
+            AutoReplyHelpLabel.Visible = true;
+            UseDirectedHelpLabel.Visible = true;
+            AlertDirectedHelpLabel.Visible = true;
+            LogEarlyHelpLabel.Visible = true;
 
             wsjtxClient.advanced = true;
         }
@@ -497,6 +505,34 @@ namespace WSJTX_Controller
         {
             string command = "mailto:more.avantol@xoxy.net?subject=WSJTX-Controller";
             System.Diagnostics.Process.Start(command);
+        }
+
+        private void AutoReplyHelpLabel_Click(object sender, EventArgs e)
+        {
+            //help for setting directed CQs
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"If you enable 'Auto-reply to CQs', the Controller will continuously add up to {wsjtxClient.maxAutoGenEnqueue} CQs to the reply list that meet these criteria:{Environment.NewLine}{Environment.NewLine}- The caller has not already been logged on the current band, and{Environment.NewLine}- The caller hasn't been replied to more than {wsjtxClient.maxPrevCqs} times during this mode / band session, and{Environment.NewLine}- If the CQ is directed to 'DX', the caller is more than {wsjtxClient.minDxDistMi} miles / {wsjtxClient.minDxDistKm} km distant, or if directed to other than 'DX', the call is directed to one of the codes in the 'Reply CQs directed to' list (if enabled).",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+
+        }
+
+        private void replyCqCheckBox_Click(object sender, EventArgs e)
+        {
+            if (replyCqCheckBox.Checked)
+            {
+                alertCheckBox.Text = "Reply CQs directed to:";
+            }
+            else
+            {
+                alertCheckBox.Text = "Alert CQs directed to:";
+            }
         }
     }
 }
