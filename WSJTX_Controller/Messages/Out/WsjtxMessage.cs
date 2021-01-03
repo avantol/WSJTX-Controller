@@ -231,10 +231,6 @@ namespace WsjtxUdpLib.Messages.Out
                     {
                         result = new UnknownMessage();
                     }
-
-                    //tempOnly
-                    //result.Datagram = datagram;
-
                     return result;
                 }
             }

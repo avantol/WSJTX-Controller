@@ -457,7 +457,7 @@ namespace WSJTX_Controller
             timer3.Start();
         }
 
-        private void label24_Click(object sender, EventArgs e)
+        private void UseDirectedHelpLabel_Click(object sender, EventArgs e)
         {
             //help for setting directed CQs
             new Thread(new ThreadStart(delegate
@@ -472,14 +472,24 @@ namespace WSJTX_Controller
             })).Start();
         }
 
-        private void label25_Click(object sender, EventArgs e)
+        private void AlertDirectedHelpLabel_Click(object sender, EventArgs e)
         {
+            string s;
+            if (replyCqCheckBox.Checked)
+            {
+                s = $"To reply to specific directed CQs (from callers you haven't worked yet):{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY";
+            }
+            else
+            {
+                s = $"To hear a notification when specific directed CQs appear in the 'Band Activity' list:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY";
+            }
+
             //help for warning for specific directed CQs
             new Thread(new ThreadStart(delegate
             {
                 MessageBox.Show
                 (
-                  $"To hear a notification when specific directed CQs appear in the 'Band Activity' list:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY",
+                  s,
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
@@ -487,7 +497,7 @@ namespace WSJTX_Controller
             })).Start();
         }
 
-        private void label26_Click(object sender, EventArgs e)
+        private void LogEarlyHelpLabel_Click(object sender, EventArgs e)
         {
             //help for early logging
             new Thread(new ThreadStart(delegate

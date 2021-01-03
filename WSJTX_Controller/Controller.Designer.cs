@@ -598,7 +598,7 @@
             this.UseDirectedHelpLabel.TabIndex = 45;
             this.UseDirectedHelpLabel.Text = "?";
             this.UseDirectedHelpLabel.Visible = false;
-            this.UseDirectedHelpLabel.Click += new System.EventHandler(this.label24_Click);
+            this.UseDirectedHelpLabel.Click += new System.EventHandler(this.UseDirectedHelpLabel_Click);
             // 
             // AlertDirectedHelpLabel
             // 
@@ -612,7 +612,7 @@
             this.AlertDirectedHelpLabel.TabIndex = 46;
             this.AlertDirectedHelpLabel.Text = "?";
             this.AlertDirectedHelpLabel.Visible = false;
-            this.AlertDirectedHelpLabel.Click += new System.EventHandler(this.label25_Click);
+            this.AlertDirectedHelpLabel.Click += new System.EventHandler(this.AlertDirectedHelpLabel_Click);
             // 
             // LogEarlyHelpLabel
             // 
@@ -626,7 +626,7 @@
             this.LogEarlyHelpLabel.TabIndex = 47;
             this.LogEarlyHelpLabel.Text = "?";
             this.LogEarlyHelpLabel.Visible = false;
-            this.LogEarlyHelpLabel.Click += new System.EventHandler(this.label26_Click);
+            this.LogEarlyHelpLabel.Click += new System.EventHandler(this.LogEarlyHelpLabel_Click);
             // 
             // verLabel3
             // 

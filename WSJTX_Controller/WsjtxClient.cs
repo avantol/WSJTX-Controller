@@ -34,7 +34,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/237", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/237", "2.3.0-rc2/105", "2.3.0-rc2/106", "2.3.0-rc2/107" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         //const
@@ -168,7 +168,7 @@ namespace WSJTX_Controller
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
                     sw = File.AppendText($"{path}\\log_{DateTime.Now.Date.ToShortDateString().Replace('/', '-')}.txt");
                     sw.AutoFlush = true;
-                    DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting.... ipAddress:{ipAddress} port:{port} multicast:{multicast}");
+                    DebugOutput($"\n\n{DateTime.UtcNow.ToString("yyyy-MM-dd HHmmss")} UTC ###################### Program starting.... v{fileVer} ipAddress:{ipAddress} port:{port} multicast:{multicast}");
                 }
                 catch (Exception err)
                 {
@@ -181,6 +181,7 @@ namespace WSJTX_Controller
             ResetNego();
             UpdateDebug();
 
+            string modeStr = multicast ? "multicast" : "unicast";
             try
             {
                 if (multicast)
@@ -197,7 +198,7 @@ namespace WSJTX_Controller
             }
             catch
             {
-                MessageBox.Show($"Unable to connect with WSJT-X using the provided IP address ({ipAddress}) and port ({port}).\n\nEnter a different IP address/port in the dialog that follows.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Unable to open the provided IP address ({ipAddress}) port ({port}) and mode: ({modeStr}).\n\nEnter a different IP address/port/mode in the dialog that follows.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 ctrl.wsjtxClient = this;
                 ctrl.setupButton_Click(null, null);
                 return;
@@ -502,64 +503,57 @@ namespace WSJTX_Controller
                             if (txEnabled && deCall != null && myCall != null && dmsg.IsCallTo(myCall))
                             {
                                 DebugOutput($"{spacer}'{deCall}' is to {myCall}");
-                                if (/*!transmitting*/ true)      //todo: can process decodes after Tx starts?
+                                if (!dmsg.Is73orRR73())       //not a 73 or RR73
                                 {
-                                    if (!dmsg.Is73orRR73())       //not a 73 or RR73
+                                    DebugOutput($"{spacer}Not a 73 or RR73");
+                                    if (!callQueue.Contains(deCall))        //call not in queue, possibly enqueue the call data
                                     {
-                                        DebugOutput($"{spacer}Not a 73 or RR73");
-                                        if (!callQueue.Contains(deCall))        //call not in queue, possibly enqueue the call data
+                                        DebugOutput($"{spacer}'{deCall}' not already in queue");
+                                        if (qsoState == WsjtxMessage.QsoStates.CALLING && callQueue.Count == 0)
                                         {
-                                            DebugOutput($"{spacer}'{deCall}' not already in queue");
-                                            if (qsoState == WsjtxMessage.QsoStates.CALLING && callQueue.Count == 0)
+                                            //"Call 1st" never in effect, so set up to reply to this call
+                                            if (autoCalling && deCall != callInProg)                //this call or another call currently being processed by WSJT-X
                                             {
-                                                //"Call 1st" never in effect, so set up to reply to this call
-                                                if (autoCalling && deCall != callInProg)                //this call or another call currently being processed by WSJT-X
-                                                {
-                                                    DebugOutput($"{spacer}callQueue empty, autoCalling:{autoCalling}, adding '{deCall}', not currently being processed");
-                                                    AddCall(deCall, dmsg);
-                                                    txTimeout = true;
-                                                    callInProg = null;
-                                                    DebugOutput($"{spacer}qsoState:{qsoState} txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
-                                                }
-                                            }
-                                            else   //not CALLING or call queue has entries
-                                            {
-                                                DebugOutput($"{spacer}calls queued or not CALLING, qsoState:{qsoState})");
-                                                if (deCall == callInProg)                //call currently being processed by WSJT-X
-                                                {
-                                                    DebugOutput($"{spacer}'{deCall}' currently being processed");
-                                                }
-                                                else
-                                                {
-                                                    DebugOutput($"{spacer}'{deCall}' not currently being processed");
-                                                    AddCall(deCall, dmsg);          //known to not be in queue
-                                                }
+                                                DebugOutput($"{spacer}callQueue empty, autoCalling:{autoCalling}, adding '{deCall}', not currently being processed");
+                                                AddCall(deCall, dmsg);
+                                                txTimeout = true;
+                                                callInProg = null;
+                                                DebugOutput($"{spacer}qsoState:{qsoState} txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
                                             }
                                         }
-                                        else       //call is already in queue, possibly update the call data
+                                        else   //not CALLING or call queue has entries
                                         {
-                                            DebugOutput($"{spacer}'{deCall}' already in queue");
+                                            DebugOutput($"{spacer}calls queued or not CALLING, qsoState:{qsoState})");
                                             if (deCall == callInProg)                //call currently being processed by WSJT-X
                                             {
                                                 DebugOutput($"{spacer}'{deCall}' currently being processed");
-                                                RemoveCall(deCall);             //may have been queued previously
                                             }
-                                            else        //update the call in queue
+                                            else
                                             {
-                                                DebugOutput($"{spacer}'{deCall}' not currently being processed, update queue");
-                                                UpdateCall(deCall, dmsg);
+                                                DebugOutput($"{spacer}'{deCall}' not currently being processed");
+                                                AddCall(deCall, dmsg);          //known to not be in queue
                                             }
                                         }
                                     }
-                                    else        //decode is 73 or RR73 msg
+                                    else       //call is already in queue, possibly update the call data
                                     {
-                                        DebugOutput($"{spacer}decode is 73 or RR73");
+                                        DebugOutput($"{spacer}'{deCall}' already in queue");
+                                        if (deCall == callInProg)                //call currently being processed by WSJT-X
+                                        {
+                                            DebugOutput($"{spacer}'{deCall}' currently being processed");
+                                            RemoveCall(deCall);             //may have been queued previously
+                                        }
+                                        else        //update the call in queue
+                                        {
+                                            DebugOutput($"{spacer}'{deCall}' not currently being processed, update queue");
+                                            UpdateCall(deCall, dmsg);
+                                        }
                                     }
                                 }
-                                //else
-                                //{
-                                //    DebugOutput($"{spacer}discarded decode, already transmitting");
-                                //}
+                                else        //decode is 73 or RR73 msg
+                                {
+                                    DebugOutput($"{spacer}decode is 73 or RR73");
+                                }
                                 UpdateDebug();
                             }
                         }
@@ -1073,16 +1067,19 @@ namespace WSJTX_Controller
             }
 
             //count tx cycles: check for changed Tx call in WSJT-X
-            if (lastTxMsg != txMsg && xmitCycleCount >= 0)
+            if (lastTxMsg != txMsg)
             {
-                //check  for "to" call changed since last xmit end
-                if (toCall != lastToCall && callQueue.Contains(toCall))
+                lastTxMsg = txMsg;                  //don't interfere with logging check
+                if (xmitCycleCount >= 0)
                 {
-                    RemoveCall(toCall);         //manually switched to Txing a call that was also in the queue
+                    //check  for "to" call changed since last xmit end
+                    if (toCall != lastToCall && callQueue.Contains(toCall))
+                    {
+                        RemoveCall(toCall);         //manually switched to Txing a call that was also in the queue
+                    }
+                    xmitCycleCount = 0;
+                    DebugOutput($"{Time()} Reset(1) (different msg) xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
                 }
-                lastTxMsg = txMsg;
-                xmitCycleCount = 0;
-                DebugOutput($"{Time()} Reset(1) (different msg) xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
             }
             else        //same "to" call as last xmit, count xmit cycles
             {
@@ -1994,7 +1991,6 @@ namespace WSJTX_Controller
         //from a call sign that isn't (or won't be) the call in progress;
         //if reports have bee exchanged, log the QSO;
         //logging is done directly via log file, not via WSJT-X
-        //todo: add CSV log file
         private void CheckLateLog(string call, DecodeMessage msg)
         {
             DebugOutput($"{Time()} CheckLateLog: call'{call}' callInProg:'{callInProg}' msg:{msg.Message} Is73orRR73:{WsjtxMessage.Is73orRR73(msg.Message)}");
