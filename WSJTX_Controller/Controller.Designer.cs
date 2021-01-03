@@ -52,6 +52,7 @@
             this.label17 = new System.Windows.Forms.Label();
             this.verLabel2 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.ExceptTextBox = new System.Windows.Forms.TextBox();
             this.replyCqCheckBox = new System.Windows.Forms.CheckBox();
             this.useRR73CheckBox = new System.Windows.Forms.CheckBox();
             this.skipGridCheckBox = new System.Windows.Forms.CheckBox();
@@ -309,6 +310,7 @@
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.ExceptTextBox);
             this.groupBox3.Controls.Add(this.replyCqCheckBox);
             this.groupBox3.Controls.Add(this.useRR73CheckBox);
             this.groupBox3.Controls.Add(this.skipGridCheckBox);
@@ -319,9 +321,17 @@
             this.groupBox3.Controls.Add(this.loggedCheckBox);
             this.groupBox3.Location = new System.Drawing.Point(14, 155);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(267, 172);
+            this.groupBox3.Size = new System.Drawing.Size(267, 175);
             this.groupBox3.TabIndex = 15;
             this.groupBox3.TabStop = false;
+            // 
+            // ExceptTextBox
+            // 
+            this.ExceptTextBox.Location = new System.Drawing.Point(166, 150);
+            this.ExceptTextBox.Name = "ExceptTextBox";
+            this.ExceptTextBox.Size = new System.Drawing.Size(81, 20);
+            this.ExceptTextBox.TabIndex = 29;
+            this.ExceptTextBox.Visible = false;
             // 
             // replyCqCheckBox
             // 
@@ -631,7 +641,7 @@
             this.AutoReplyHelpLabel.BackColor = System.Drawing.SystemColors.Control;
             this.AutoReplyHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.AutoReplyHelpLabel.ForeColor = System.Drawing.Color.Blue;
-            this.AutoReplyHelpLabel.Location = new System.Drawing.Point(136, 303);
+            this.AutoReplyHelpLabel.Location = new System.Drawing.Point(262, 304);
             this.AutoReplyHelpLabel.Name = "AutoReplyHelpLabel";
             this.AutoReplyHelpLabel.Size = new System.Drawing.Size(15, 19);
             this.AutoReplyHelpLabel.TabIndex = 49;
@@ -760,6 +770,7 @@
         public System.Windows.Forms.Label verLabel3;
         public System.Windows.Forms.CheckBox replyCqCheckBox;
         public System.Windows.Forms.Label AutoReplyHelpLabel;
+        public System.Windows.Forms.TextBox ExceptTextBox;
     }
 }
 

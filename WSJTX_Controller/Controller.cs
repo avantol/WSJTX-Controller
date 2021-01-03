@@ -363,6 +363,7 @@ namespace WSJTX_Controller
             UseDirectedHelpLabel.Visible = true;
             AlertDirectedHelpLabel.Visible = true;
             LogEarlyHelpLabel.Visible = true;
+            //ExceptTextBox.Visible = true;
 
             wsjtxClient.advanced = true;
         }
