@@ -34,14 +34,12 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/234", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/237", "2.3.0-rc2/104", "2.3.0-rc2/105", "2.3.0-rc2/106" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         //const
         public int maxPrevCqs = 2;
         public int maxAutoGenEnqueue = 4;
-        public int minDxDistMi = 1000;
-        public int minDxDistKm = 1600;
 
         private bool logToFile = false;
         private StreamWriter sw;
@@ -1592,14 +1590,17 @@ namespace WSJTX_Controller
         }
         */
 
-        //process a manually- or automatically-generated request to add decode to call reply queue
+        //process a manually- or automatically-generated request to add a decode to call reply queue
         public void AddSelectedCall(EnqueueDecodeMessage emsg)
         {
             string msg = emsg.Message;
-            string deCall = WsjtxMessage.DeCall(msg); ;
-            string toCall = WsjtxMessage.ToCall(msg); ;
+            string deCall = WsjtxMessage.DeCall(msg);
+            string toCall = WsjtxMessage.ToCall(msg);
             string directedTo = WsjtxMessage.DirectedTo(msg);
 
+            //auto-generated notification of a CQ;
+            //IsDx only validw for auto-generated "CQ DX" case, 
+            //not for other auto-generated or any manually-selected message
             if (emsg.AutoGen) DebugOutput($"{Time()} AddSelectedCall, AutoGen:{emsg.AutoGen} deCall:'{deCall}' IsDx:{emsg.IsDx}");
 
             if (emsg.AutoGen)       //automatically-generated queue request
@@ -1626,10 +1627,10 @@ namespace WSJTX_Controller
                         int prevCqs = 0;
                         if (!cqCallDict.TryGetValue(deCall, out prevCqs) || prevCqs < maxPrevCqs)
                         {
-                            if (wantedDirected) emsg.Priority = true;   //since wanted, give priority
+                            if (wantedDirected) emsg.Priority = true;   //since know to be wanted, give same priority as an actual reply
                             AddCall(deCall, emsg);              //add to call queue
 
-                            if (prevCqs > 0)                   //track how many times called CQ this call
+                            if (prevCqs > 0)                   //track how many times Controlller replied to CQ from this call sign
                             {
                                 cqCallDict.Remove(deCall);
                             }

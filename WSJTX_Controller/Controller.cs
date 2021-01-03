@@ -515,7 +515,7 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"If you enable 'Auto-reply to CQs', the Controller will continuously add up to {wsjtxClient.maxAutoGenEnqueue} CQs to the reply list that meet these criteria:{Environment.NewLine}{Environment.NewLine}- The caller has not already been logged on the current band, and{Environment.NewLine}- The caller hasn't been replied to more than {wsjtxClient.maxPrevCqs} times during this mode / band session, and{Environment.NewLine}- If the CQ is directed to 'DX', the caller is more than {wsjtxClient.minDxDistMi} miles / {wsjtxClient.minDxDistKm} km distant, or if directed to other than 'DX', the call is directed to one of the codes in the 'Reply CQs directed to' list (if enabled).",
+                  $"If you enable 'Auto-reply to CQs', the Controller will continuously add up to {wsjtxClient.maxAutoGenEnqueue} CQs to the reply list that meet these criteria:{Environment.NewLine}{Environment.NewLine}- The caller has not already been logged on the current band, and{Environment.NewLine}- The caller hasn't been replied to more than {wsjtxClient.maxPrevCqs} times during this mode / band session, and{Environment.NewLine}- If the CQ is directed to 'DX', the caller is on a different continent, or if directed to other than 'DX', the CQ is directed to one of the codes in the 'Reply CQs directed to' list (if enabled).",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
