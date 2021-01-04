@@ -15,12 +15,6 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_09540A315B104FCCA4CC36E8F19BAA8A"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_13955C8D95C14416A597653571C6CA17"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -174,26 +168,6 @@
         }
         "File"
         {
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_09540A315B104FCCA4CC36E8F19BAA8A"
-            {
-            "SourcePath" = "8:..\\WSJTX_Controller\\Resources\\DingDing.wav"
-            "TargetName" = "8:DingDing.wav"
-            "Tag" = "8:"
-            "Folder" = "8:_F9097703E65145C3AE3E9348ED10AEA6"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_13DCBD09287843EE9E14B6B2ED17F5E8"
             {
             "SourcePath" = "8:..\\WSJTX_Controller\\Resources\\Dive.wav"
@@ -402,7 +376,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:WSJT-X Controller"
         "ProductCode" = "8:{F0576E79-1CD2-409A-B3EF-20E6B9353A07}"
-        "PackageCode" = "8:{0FBBEE88-9BA3-4ECE-A48B-4C02A7E84175}"
+        "PackageCode" = "8:{38CE3826-C8FC-4A25-80B4-2443FE4746E1}"
         "UpgradeCode" = "8:{58863A86-1E9E-4ECA-8AF5-C8BEE7AB4238}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
@@ -951,7 +925,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_13955C8D95C14416A597653571C6CA17"
             {
-            "SourcePath" = "8:"
+            "SourcePath" = "8:..\\WSJTX_Controller\\obj\\Release\\WSJTX_Controller.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_F9097703E65145C3AE3E9348ED10AEA6"

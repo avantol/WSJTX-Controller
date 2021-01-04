@@ -36,8 +36,8 @@ namespace WSJTX_Controller
             bool multicast = multicastcheckBox.Checked;
             UInt16 port;
             IPAddress ipAddress;
-            IPEndPoint endPoint;
-            UdpClient udpClient;
+            //IPEndPoint endPoint;
+            //UdpClient udpClient;
             DialogResult res;
 
             if (!UInt16.TryParse(portTextBox.Text, out port))

@@ -1425,6 +1425,7 @@ namespace WSJTX_Controller
             }
             catch (Exception e)         //udpClient might be disposed already
             {
+                e.ToString();
                 DebugOutput($"{Time()} Error at Closing, udpClient:{udpClient} udpClient2:{udpClient2}");
             }
             udpClient = null;
