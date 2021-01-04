@@ -1355,7 +1355,7 @@ namespace WSJTX_Controller
             }
 
             ShowQueue();
-            dmsg.Message = dmsg.Message.Replace("73", "  ");            //important, otherwise WSJT-X will not respond
+            if (WsjtxMessage.Is73(dmsg.Message)) dmsg.Message = dmsg.Message.Replace("73", "");            //important, otherwise WSJT-X will not respond
             DebugOutput($"{Time()} Dequeued {call}: msg:'{dmsg.Message}' {CallQueueString()} {CallDictString()}");
             return call;
         }
