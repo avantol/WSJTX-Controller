@@ -8,6 +8,7 @@ WSJTX Controller is a "helper" program that runs alongside WSJT-X, apparently th
 Now you can do things like:
 - reply to CQs from caller you haven't worked yet,
 - queue up the interesting calls,
+- never miss a "late" 73 again,
 - bypass WSJT-X's clunky way of skipping the grid message or using RR73, or
 - sequence randomly through your choice of directed CQs, for those hard-to-get QSOs, or
 - optimize your success rate by logging as soon as both signal reports are confirmed, or
@@ -15,6 +16,10 @@ Now you can do things like:
 - (best of all) call whoever someone else is calling (like that rare DX!) with just one click.
 
 That last option sure beats copying and pasting a call sign, changing the Tx period, and selecting the QSO phase in WSJT-X. While you were doing all that, someone else got their call answered!
+
+Have you ever had a "73" finally come in from a DX you'd been working, but you've long since moved on to other calls? How do you log that? You could scramble like crazy and try clicking on old decodes and try to get the signal reports right, but it doesn't really work, and it's a mess. But now, never again... the Controller saves everything, and accurately logs that late "73" decode, automatically... while you're working on other calls!
+
+The Controller can keep busy when not answering replies by replying to CQs, with priority given to directed CQs you specify.
 
 As you run WSJT-X manually, your "helper" gets out of the way. But, if you need a break from the action, just stop and kick back.... your "helper" takes over for you... go get a snack or rest your eyes. 
 
