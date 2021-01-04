@@ -3,17 +3,10 @@
 
 WSJTX Controller is a "helper" program that runs alongside WSJT-X, apparently the most popular ham radio program of all time. This "helper" does a lot of the boring WSJT-X manual work for you. (You will need to install a slightly-modified WSJT-X program, available at https://github.com/avantol/WSJT-X2-2-2-mod, more info below)
 
-Its "Basic" mode is completely hands-off, the helper simply queues up calls to you, 
-that come in while you're working another call:
-
-![image](https://user-images.githubusercontent.com/5302633/101517114-96c1be80-393d-11eb-925b-0fd52c70753e.png)
-
-Once you get familiar with how the basics work, you can select "More options":
-
-![image](https://user-images.githubusercontent.com/5302633/101517329-df797780-393d-11eb-8b0e-e43ea2b0f3a2.png)
+![image](https://user-images.githubusercontent.com/5302633/103505545-b7374880-4e17-11eb-816f-cec81104d97c.png)
 
 Now you can do things like:
-- review the list of recent calls,
+- reply to CQs from caller you haven't worked yet,
 - queue up the interesting calls,
 - bypass WSJT-X's clunky way of skipping the grid message or using RR73, or
 - sequence randomly through your choice of directed CQs, for those hard-to-get QSOs, or
