@@ -152,11 +152,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\DingDing.wav">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\Dive.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

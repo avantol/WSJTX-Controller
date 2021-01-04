@@ -14,7 +14,6 @@ C:\Users\John\source\repos\WSJTX_Controller\WSJTX_Controller\bin\Release\Resourc
 C:\Users\John\source\repos\WSJTX_Controller\WSJTX_Controller\bin\Release\Resources\BeepBeep.wav
 C:\Users\John\source\repos\WSJTX_Controller\WSJTX_Controller\bin\Release\Resources\Trumpet.wav
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\bin\Release\Resources\Blip.wav
-C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\bin\Release\Resources\DingDing.wav
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\bin\Release\Resources\Dive.wav
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\bin\Release\Resources\Echo.wav
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\bin\Release\Resources\Trumpet.wav

@@ -473,7 +473,7 @@ namespace WSJTX_Controller
                             if (deCall != null)
                             {
                                 //check for directed CQ
-                                if (ctrl.alertCheckBox.Checked)
+                                if (ctrl.alertCheckBox.Checked && !ctrl.replyCqCheckBox.Checked)
                                 {
                                     string d = WsjtxMessage.DirectedTo(dmsg.Message);
                                     if (d != null && ctrl.alertTextBox.Text.ToUpper().Contains(d))
@@ -2071,7 +2071,7 @@ namespace WSJTX_Controller
                 }
             }
 
-            if (!debug && ctrl.loggedCheckBox.Checked) Play("echo.wav");
+            if (ctrl.loggedCheckBox.Checked) Play("echo.wav");
             ctrl.ShowMsg($"Logging late QSO with {call}", false);
             logList.Add(call);      //even if already logged this mode/band
             UpdateCqCall(call);     //no more CQ responses to this call
