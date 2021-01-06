@@ -792,8 +792,11 @@ namespace WSJTX_Controller
                     if (lastDialFrequency != null && (Math.Abs((Int64)lastDialFrequency - (Int64)dialFrequency) > 500000))
                     {
                         ClearCalls(true);
-                        logList.Clear();            //can re-log on new band
-                        DebugOutput($"{Time()} Cleared queued calls:DialFrequency");
+                        logList.Clear();        //can re-log on new band
+                        txTimeout = true;       //cancel current calling
+                        callInProg = null;      //not calling anyone
+                        CheckNextXmit();
+                        DebugOutput($"{Time()} Cleared queued calls:DialFrequency, txTimeout:{txTimeout} callInProg:{callInProg}");
                         lastDialFrequency = smsg.DialFrequency;
                     }
 
@@ -801,7 +804,13 @@ namespace WSJTX_Controller
                     if (txFirst != lastTxFirst)
                     {
                         ClearCalls(false);
-                        DebugOutput($"{Time()} Cleared queued calls: txFirst:{txFirst}");
+                        if (txEnabled)
+                        {
+                            txTimeout = true;       //cancel current calling
+                            callInProg = null;      //not calling anyone
+                            CheckNextXmit();        //there won't be a decode phase, so determine next Tx now
+                        }
+                        DebugOutput($"{Time()} Cleared queued calls: txFirst:{txFirst} txTimeout:{txTimeout} callInProg:{callInProg}");
                         lastTxFirst = txFirst;
                     }
 
@@ -2038,7 +2047,7 @@ namespace WSJTX_Controller
             string qsoTimeOn = reptMsg.SinceMidnight.ToString("hhmmss");      //one of the report decodes
             string qsoTimeOff = lateMsg.SinceMidnight.ToString("hhmmss");
             string qsoMode = mode;
-            string freq = (dialFrequency + txOffset / 1e6).ToString("F6");
+            string freq = ((dialFrequency + txOffset) / 1e6).ToString("F6");
             string band = FreqToBand(dialFrequency / 1e6);
 
             string adifRecord = $"<call:{call.Length}>{call}  <gridsquare:0> <mode:{mode.Length}>{mode} <rst_sent:{rstSent.Length}>{rstSent} <rst_rcvd:{rstRecd.Length}>{rstRecd} <qso_date:{qsoDateOn.Length}>{qsoDateOn} <time_on:{qsoTimeOn.Length}>{qsoTimeOn} <qso_date_off:{qsoDateOff.Length}>{qsoDateOff} <time_off:{qsoTimeOff.Length}>{qsoTimeOff} <band:{band.Length}>{band} <freq:{freq.Length}>{freq} <station_callsign:{myCall.Length}>{myCall} <my_gridsquare:{myGrid.Length}>{myGrid} <eor>";
