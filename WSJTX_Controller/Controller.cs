@@ -22,6 +22,7 @@ namespace WSJTX_Controller
         private bool formLoaded = false;
         private SetupDlg setupDlg = null;
         private ErrorDlg errDlg = null;
+        public bool alwaysOnTop = false;
 
         private System.Windows.Forms.Timer timer1;
         public System.Windows.Forms.Timer timer2;
@@ -113,6 +114,7 @@ namespace WSJTX_Controller
             logEarlyCheckBox.Checked = Properties.Settings.Default.logEarly;
             //wsjtxClient.debug = Properties.Settings.Default.debug;
             wsjtxClient.advanced = Properties.Settings.Default.advanced;
+            alwaysOnTop = Properties.Settings.Default.alwaysOnTop;
             useRR73CheckBox.Checked = Properties.Settings.Default.useRR73;
             skipGridCheckBox.Checked = Properties.Settings.Default.skipGrid;
             replyCqCheckBox.Checked = Properties.Settings.Default.autoReplyCq;
@@ -142,6 +144,9 @@ namespace WSJTX_Controller
             {
                 advButton_Click(null, null);
             }
+            TopMost = alwaysOnTop;
+
+
             UpdateDebug();
             ResumeLayout();
             formLoaded = true;
@@ -173,6 +178,7 @@ namespace WSJTX_Controller
             Properties.Settings.Default.alertDirecteds = alertTextBox.Text;
             Properties.Settings.Default.logEarly = logEarlyCheckBox.Checked;
             Properties.Settings.Default.advanced = wsjtxClient.advanced;
+            Properties.Settings.Default.alwaysOnTop = alwaysOnTop;
             Properties.Settings.Default.useRR73 = useRR73CheckBox.Checked;
             Properties.Settings.Default.skipGrid = skipGridCheckBox.Checked;
             Properties.Settings.Default.firstRunDateTime = wsjtxClient.firstRunDateTime;
@@ -407,6 +413,7 @@ namespace WSJTX_Controller
         
         public void SetupDlgClosed()
         {
+            TopMost = alwaysOnTop;
             setupDlg = null;
         }
 

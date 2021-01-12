@@ -36,6 +36,7 @@
             this.addrTextBox = new System.Windows.Forms.TextBox();
             this.OkButton = new System.Windows.Forms.Button();
             this.CancelButton = new System.Windows.Forms.Button();
+            this.onTopCheckBox = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -48,7 +49,7 @@
             this.groupBox1.Controls.Add(this.addrTextBox);
             this.groupBox1.Location = new System.Drawing.Point(13, 13);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(264, 129);
+            this.groupBox1.Size = new System.Drawing.Size(264, 108);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "UDP settings";
@@ -56,7 +57,7 @@
             // multicastcheckBox
             // 
             this.multicastcheckBox.AutoSize = true;
-            this.multicastcheckBox.Location = new System.Drawing.Point(124, 92);
+            this.multicastcheckBox.Location = new System.Drawing.Point(124, 79);
             this.multicastcheckBox.Name = "multicastcheckBox";
             this.multicastcheckBox.Size = new System.Drawing.Size(70, 17);
             this.multicastcheckBox.TabIndex = 4;
@@ -66,7 +67,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(26, 64);
+            this.label2.Location = new System.Drawing.Point(26, 52);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(54, 13);
             this.label2.TabIndex = 3;
@@ -75,7 +76,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(26, 35);
+            this.label1.Location = new System.Drawing.Point(26, 24);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(73, 13);
             this.label1.TabIndex = 2;
@@ -83,21 +84,21 @@
             // 
             // portTextBox
             // 
-            this.portTextBox.Location = new System.Drawing.Point(125, 61);
+            this.portTextBox.Location = new System.Drawing.Point(125, 49);
             this.portTextBox.Name = "portTextBox";
             this.portTextBox.Size = new System.Drawing.Size(100, 20);
             this.portTextBox.TabIndex = 1;
             // 
             // addrTextBox
             // 
-            this.addrTextBox.Location = new System.Drawing.Point(125, 32);
+            this.addrTextBox.Location = new System.Drawing.Point(125, 20);
             this.addrTextBox.Name = "addrTextBox";
             this.addrTextBox.Size = new System.Drawing.Size(100, 20);
             this.addrTextBox.TabIndex = 0;
             // 
             // OkButton
             // 
-            this.OkButton.Location = new System.Drawing.Point(54, 160);
+            this.OkButton.Location = new System.Drawing.Point(54, 171);
             this.OkButton.Name = "OkButton";
             this.OkButton.Size = new System.Drawing.Size(75, 23);
             this.OkButton.TabIndex = 1;
@@ -107,7 +108,7 @@
             // 
             // CancelButton
             // 
-            this.CancelButton.Location = new System.Drawing.Point(154, 160);
+            this.CancelButton.Location = new System.Drawing.Point(154, 171);
             this.CancelButton.Name = "CancelButton";
             this.CancelButton.Size = new System.Drawing.Size(75, 23);
             this.CancelButton.TabIndex = 2;
@@ -115,11 +116,22 @@
             this.CancelButton.UseVisualStyleBackColor = true;
             this.CancelButton.Click += new System.EventHandler(this.CancelButton_Click);
             // 
+            // onTopCheckBox
+            // 
+            this.onTopCheckBox.AutoSize = true;
+            this.onTopCheckBox.Location = new System.Drawing.Point(13, 134);
+            this.onTopCheckBox.Name = "onTopCheckBox";
+            this.onTopCheckBox.Size = new System.Drawing.Size(138, 17);
+            this.onTopCheckBox.TabIndex = 3;
+            this.onTopCheckBox.Text = "Controller always on top";
+            this.onTopCheckBox.UseVisualStyleBackColor = true;
+            // 
             // SetupDlg
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(291, 195);
+            this.ClientSize = new System.Drawing.Size(291, 204);
+            this.Controls.Add(this.onTopCheckBox);
             this.Controls.Add(this.CancelButton);
             this.Controls.Add(this.OkButton);
             this.Controls.Add(this.groupBox1);
@@ -131,6 +143,7 @@
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -144,5 +157,6 @@
         private System.Windows.Forms.Button OkButton;
         private System.Windows.Forms.Button CancelButton;
         private System.Windows.Forms.CheckBox multicastcheckBox;
+        private System.Windows.Forms.CheckBox onTopCheckBox;
     }
 }

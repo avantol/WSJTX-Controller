@@ -98,9 +98,10 @@ namespace WSJTX_Controller
             }
             */
 
-            //if no change, no need to notify
+            //if no change, no need to notify/exit
             if (wsjtxClient.ipAddress.ToString() == ipAddress.ToString() && wsjtxClient.port == port && wsjtxClient.multicast == multicast)
             {
+                ctrl.alwaysOnTop = onTopCheckBox.Checked;
                 ctrl.SetupDlgClosed();
                 Close();
                 return;
@@ -109,6 +110,7 @@ namespace WSJTX_Controller
             res = MessageBox.Show($"{wsjtxClient.pgmName} will exit now, restart {wsjtxClient.pgmName} for the new settings to take effect", wsjtxClient.pgmName, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
             if (res == DialogResult.Cancel) return;
 
+            ctrl.alwaysOnTop = onTopCheckBox.Checked;
             wsjtxClient.UpdateAddrPortMulti(ipAddress, port, multicast);
             ctrl.SetupDlgClosed();
             Close();
@@ -119,6 +121,7 @@ namespace WSJTX_Controller
             addrTextBox.Text = wsjtxClient.ipAddress.ToString();
             portTextBox.Text = wsjtxClient.port.ToString();
             multicastcheckBox.Checked = wsjtxClient.multicast;
+            onTopCheckBox.Checked = ctrl.alwaysOnTop;
         }
 
         private void SetupDlg_FormClosing(object sender, FormClosingEventArgs e)
