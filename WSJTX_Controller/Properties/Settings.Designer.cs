@@ -25,7 +25,7 @@ namespace WSJTX_Controller.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("6")]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
         public int timeout {
             get {
                 return ((int)(this["timeout"]));
