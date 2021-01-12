@@ -109,6 +109,7 @@
             this.callText.Size = new System.Drawing.Size(39, 13);
             this.callText.TabIndex = 6;
             this.callText.Text = "[None]";
+            this.callText.MouseUp += new System.Windows.Forms.MouseEventHandler(this.callText_MouseUp);
             // 
             // groupBox1
             // 

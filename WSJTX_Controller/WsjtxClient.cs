@@ -116,7 +116,7 @@ namespace WSJTX_Controller
         private static bool recvStarted;
         private string failReason = "Failure reason: Unknown";
 
-        private const int maxQueueLines = 6, maxQueueWidth = 19, maxLogWidth = 9;
+        public const int maxQueueLines = 6, maxQueueWidth = 19, maxLogWidth = 9;
         private byte[] ba;
         private EnableTxMessage emsg;
         //HaltTxMessage amsg;
@@ -2186,6 +2186,17 @@ namespace WSJTX_Controller
                 cqCallDict.Remove(call);
             }
             cqCallDict.Add(call, maxPrevCqs);
+        }
+
+        public void EditCallQueue(int idx)
+        {
+            if (callQueue.Count < idx + 1) return;
+            var callArray = callQueue.ToArray();
+            string call = callArray[idx];
+            if (MessageBox.Show($"Delete {call}?", pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                RemoveCall(call);
+            }
         }
     }
 }
