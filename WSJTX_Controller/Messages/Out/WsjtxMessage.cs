@@ -144,14 +144,17 @@ namespace WsjtxUdpLib.Messages.Out
             return true;
         }
 
+        //return the "directed to" part of the call (if exists) in a possible CQ msg
+        //msg only in the form "CQ WY K1JT" or "CQ WY K1JT EM51"
+        //not acceptable: "CQ USA K1JT" or "CQ USA K1JT EM51" or "CQ WY SD K1JT" or "CQ WY SD K1JT EM51"
+        //(reason: 3-char "to" not distinguishable from a call sign, multiple "to" not std msgs)
+        //if not a directed CQ msg msg, return null
         public static string DirectedTo(string msg)
         {
-            //return the "directed to" part of the call from the CQ msg in the form "CQ NA K1JT FN60"
-            //if not a directed CQ msg msg, return null
             if (msg == null) return null;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Count() != 4) return null;
-            if (words[0] != "CQ") return null;
+            if (words.Count() < 3 || words.Count() > 4) return null;
+            if (words[0] != "CQ" || words[1].Length != 2) return null;
             return words[1];
         }
 

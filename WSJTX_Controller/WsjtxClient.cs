@@ -116,7 +116,7 @@ namespace WSJTX_Controller
         private static bool recvStarted;
         private string failReason = "Failure reason: Unknown";
 
-        public const int maxQueueLines = 6, maxQueueWidth = 19, maxLogWidth = 9;
+        public const int maxQueueLines = 6, maxQueueWidth = 18, maxLogWidth = 9;
         private byte[] ba;
         private EnableTxMessage emsg;
         //HaltTxMessage amsg;
@@ -1606,7 +1606,7 @@ namespace WSJTX_Controller
             string directedTo = WsjtxMessage.DirectedTo(msg);
 
             //auto-generated notification of a CQ;
-            //IsDx only validw for auto-generated "CQ DX" case, 
+            //IsDx only valid for auto-generated "CQ DX" case, 
             //not for other auto-generated or any manually-selected message
             if (emsg.AutoGen) DebugOutput($"{Time()} AddSelectedCall, AutoGen:{emsg.AutoGen} deCall:'{deCall}' IsDx:{emsg.IsDx}");
 
