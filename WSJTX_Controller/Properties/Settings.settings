@@ -65,5 +65,14 @@
     <Setting Name="alwaysOnTop" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="exclude" Type="System.String" Scope="User">
+      <Value Profile="(Default)">^K[0-9]|^K[A-G,I-O,Q-Z][0-9]|^W[0-9]|^W[A-G,I-O,Q-Z][0-9]|^N[0-9]|^N[A-G,I-O,Q-Z][0-9]|^A[A-G,I-O,Q-Z][0-9]|^V[A-G][0-9]|^VO|^VY|^J[A-S][0-9]|^7[J-N][0-9]|^X[A-I][^4]</Value>
+    </Setting>
+    <Setting Name="enableExclude" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="firstRun" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

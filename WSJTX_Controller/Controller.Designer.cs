@@ -52,7 +52,8 @@
             this.label17 = new System.Windows.Forms.Label();
             this.verLabel2 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.ExceptTextBox = new System.Windows.Forms.TextBox();
+            this.exceptCheckBox = new System.Windows.Forms.CheckBox();
+            this.exceptTextBox = new System.Windows.Forms.TextBox();
             this.replyCqCheckBox = new System.Windows.Forms.CheckBox();
             this.useRR73CheckBox = new System.Windows.Forms.CheckBox();
             this.skipGridCheckBox = new System.Windows.Forms.CheckBox();
@@ -82,6 +83,7 @@
             this.LogEarlyHelpLabel = new System.Windows.Forms.Label();
             this.verLabel3 = new System.Windows.Forms.Label();
             this.AutoReplyHelpLabel = new System.Windows.Forms.Label();
+            this.ExcludeHelpLabel = new System.Windows.Forms.Label();
             this.groupBox3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeoutNumUpDown)).BeginInit();
             this.SuspendLayout();
@@ -94,7 +96,7 @@
             this.statusText.Location = new System.Drawing.Point(14, 334);
             this.statusText.Name = "statusText";
             this.statusText.ReadOnly = true;
-            this.statusText.Size = new System.Drawing.Size(267, 20);
+            this.statusText.Size = new System.Drawing.Size(270, 20);
             this.statusText.TabIndex = 3;
             this.statusText.TabStop = false;
             this.statusText.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
@@ -125,7 +127,7 @@
             this.groupBox2.BackColor = System.Drawing.SystemColors.Control;
             this.groupBox2.Location = new System.Drawing.Point(178, 26);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(103, 130);
+            this.groupBox2.Size = new System.Drawing.Size(106, 130);
             this.groupBox2.TabIndex = 11;
             this.groupBox2.TabStop = false;
             // 
@@ -311,7 +313,8 @@
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.ExceptTextBox);
+            this.groupBox3.Controls.Add(this.exceptCheckBox);
+            this.groupBox3.Controls.Add(this.exceptTextBox);
             this.groupBox3.Controls.Add(this.replyCqCheckBox);
             this.groupBox3.Controls.Add(this.useRR73CheckBox);
             this.groupBox3.Controls.Add(this.skipGridCheckBox);
@@ -322,22 +325,34 @@
             this.groupBox3.Controls.Add(this.loggedCheckBox);
             this.groupBox3.Location = new System.Drawing.Point(14, 155);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(267, 175);
+            this.groupBox3.Size = new System.Drawing.Size(270, 175);
             this.groupBox3.TabIndex = 15;
             this.groupBox3.TabStop = false;
             // 
-            // ExceptTextBox
+            // exceptCheckBox
             // 
-            this.ExceptTextBox.Location = new System.Drawing.Point(166, 150);
-            this.ExceptTextBox.Name = "ExceptTextBox";
-            this.ExceptTextBox.Size = new System.Drawing.Size(81, 20);
-            this.ExceptTextBox.TabIndex = 29;
-            this.ExceptTextBox.Visible = false;
+            this.exceptCheckBox.AutoSize = true;
+            this.exceptCheckBox.Location = new System.Drawing.Point(151, 151);
+            this.exceptCheckBox.Name = "exceptCheckBox";
+            this.exceptCheckBox.Size = new System.Drawing.Size(49, 17);
+            this.exceptCheckBox.TabIndex = 30;
+            this.exceptCheckBox.Text = "Excl:";
+            this.exceptCheckBox.UseVisualStyleBackColor = true;
+            this.exceptCheckBox.Visible = false;
+            this.exceptCheckBox.Click += new System.EventHandler(this.exceptCheckBox_Click);
+            // 
+            // exceptTextBox
+            // 
+            this.exceptTextBox.Location = new System.Drawing.Point(201, 150);
+            this.exceptTextBox.Name = "exceptTextBox";
+            this.exceptTextBox.Size = new System.Drawing.Size(50, 20);
+            this.exceptTextBox.TabIndex = 29;
+            this.exceptTextBox.Visible = false;
             // 
             // replyCqCheckBox
             // 
             this.replyCqCheckBox.AutoSize = true;
-            this.replyCqCheckBox.Location = new System.Drawing.Point(12, 151);
+            this.replyCqCheckBox.Location = new System.Drawing.Point(10, 151);
             this.replyCqCheckBox.Name = "replyCqCheckBox";
             this.replyCqCheckBox.Size = new System.Drawing.Size(108, 17);
             this.replyCqCheckBox.TabIndex = 28;
@@ -349,7 +364,7 @@
             // useRR73CheckBox
             // 
             this.useRR73CheckBox.AutoSize = true;
-            this.useRR73CheckBox.Location = new System.Drawing.Point(141, 12);
+            this.useRR73CheckBox.Location = new System.Drawing.Point(148, 12);
             this.useRR73CheckBox.Name = "useRR73CheckBox";
             this.useRR73CheckBox.Size = new System.Drawing.Size(98, 17);
             this.useRR73CheckBox.TabIndex = 27;
@@ -361,7 +376,7 @@
             // skipGridCheckBox
             // 
             this.skipGridCheckBox.AutoSize = true;
-            this.skipGridCheckBox.Location = new System.Drawing.Point(11, 12);
+            this.skipGridCheckBox.Location = new System.Drawing.Point(9, 12);
             this.skipGridCheckBox.Name = "skipGridCheckBox";
             this.skipGridCheckBox.Size = new System.Drawing.Size(89, 17);
             this.skipGridCheckBox.TabIndex = 26;
@@ -373,7 +388,7 @@
             // logEarlyCheckBox
             // 
             this.logEarlyCheckBox.AutoSize = true;
-            this.logEarlyCheckBox.Location = new System.Drawing.Point(11, 35);
+            this.logEarlyCheckBox.Location = new System.Drawing.Point(9, 35);
             this.logEarlyCheckBox.Name = "logEarlyCheckBox";
             this.logEarlyCheckBox.Size = new System.Drawing.Size(230, 17);
             this.logEarlyCheckBox.TabIndex = 25;
@@ -394,9 +409,9 @@
             // directedTextBox
             // 
             this.directedTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.directedTextBox.Location = new System.Drawing.Point(143, 77);
+            this.directedTextBox.Location = new System.Drawing.Point(150, 77);
             this.directedTextBox.Name = "directedTextBox";
-            this.directedTextBox.Size = new System.Drawing.Size(102, 20);
+            this.directedTextBox.Size = new System.Drawing.Size(100, 20);
             this.directedTextBox.TabIndex = 23;
             this.directedTextBox.Text = "(separate by spaces)";
             this.directedTextBox.Visible = false;
@@ -405,11 +420,11 @@
             // directedCheckBox
             // 
             this.directedCheckBox.AutoSize = true;
-            this.directedCheckBox.Location = new System.Drawing.Point(11, 79);
+            this.directedCheckBox.Location = new System.Drawing.Point(9, 79);
             this.directedCheckBox.Name = "directedCheckBox";
-            this.directedCheckBox.Size = new System.Drawing.Size(124, 17);
+            this.directedCheckBox.Size = new System.Drawing.Size(108, 17);
             this.directedCheckBox.TabIndex = 22;
-            this.directedCheckBox.Text = "Use CQs directed to:";
+            this.directedCheckBox.Text = "Direct my CQs to:";
             this.directedCheckBox.UseVisualStyleBackColor = true;
             this.directedCheckBox.Visible = false;
             this.directedCheckBox.CheckedChanged += new System.EventHandler(this.directedCheckBox_CheckedChanged);
@@ -417,7 +432,7 @@
             // loggedCheckBox
             // 
             this.loggedCheckBox.AutoSize = true;
-            this.loggedCheckBox.Location = new System.Drawing.Point(144, 103);
+            this.loggedCheckBox.Location = new System.Drawing.Point(151, 103);
             this.loggedCheckBox.Name = "loggedCheckBox";
             this.loggedCheckBox.Size = new System.Drawing.Size(117, 17);
             this.loggedCheckBox.TabIndex = 21;
@@ -428,11 +443,11 @@
             // alertCheckBox
             // 
             this.alertCheckBox.AutoSize = true;
-            this.alertCheckBox.Location = new System.Drawing.Point(26, 282);
+            this.alertCheckBox.Location = new System.Drawing.Point(24, 282);
             this.alertCheckBox.Name = "alertCheckBox";
-            this.alertCheckBox.Size = new System.Drawing.Size(126, 17);
+            this.alertCheckBox.Size = new System.Drawing.Size(136, 17);
             this.alertCheckBox.TabIndex = 19;
-            this.alertCheckBox.Text = "Alert CQs directed to:";
+            this.alertCheckBox.Text = "Alert for CQ directed to:";
             this.alertCheckBox.UseVisualStyleBackColor = true;
             this.alertCheckBox.Visible = false;
             this.alertCheckBox.CheckedChanged += new System.EventHandler(this.alertCheckBox_CheckedChanged);
@@ -440,9 +455,9 @@
             // alertTextBox
             // 
             this.alertTextBox.ForeColor = System.Drawing.Color.Gray;
-            this.alertTextBox.Location = new System.Drawing.Point(158, 280);
+            this.alertTextBox.Location = new System.Drawing.Point(165, 280);
             this.alertTextBox.Name = "alertTextBox";
-            this.alertTextBox.Size = new System.Drawing.Size(102, 20);
+            this.alertTextBox.Size = new System.Drawing.Size(100, 20);
             this.alertTextBox.TabIndex = 20;
             this.alertTextBox.Text = "(separate by spaces)";
             this.alertTextBox.Visible = false;
@@ -451,7 +466,7 @@
             // mycallCheckBox
             // 
             this.mycallCheckBox.AutoSize = true;
-            this.mycallCheckBox.Location = new System.Drawing.Point(26, 258);
+            this.mycallCheckBox.Location = new System.Drawing.Point(24, 258);
             this.mycallCheckBox.Name = "mycallCheckBox";
             this.mycallCheckBox.Size = new System.Drawing.Size(117, 17);
             this.mycallCheckBox.TabIndex = 7;
@@ -470,7 +485,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(24, 212);
+            this.label1.Location = new System.Drawing.Point(20, 212);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(71, 13);
             this.label1.TabIndex = 13;
@@ -487,7 +502,7 @@
             // 
             // setupButton
             // 
-            this.setupButton.Location = new System.Drawing.Point(224, 357);
+            this.setupButton.Location = new System.Drawing.Point(227, 357);
             this.setupButton.Name = "setupButton";
             this.setupButton.Size = new System.Drawing.Size(57, 27);
             this.setupButton.TabIndex = 35;
@@ -593,7 +608,7 @@
             this.UseDirectedHelpLabel.BackColor = System.Drawing.SystemColors.Control;
             this.UseDirectedHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.UseDirectedHelpLabel.ForeColor = System.Drawing.Color.Blue;
-            this.UseDirectedHelpLabel.Location = new System.Drawing.Point(262, 232);
+            this.UseDirectedHelpLabel.Location = new System.Drawing.Point(265, 232);
             this.UseDirectedHelpLabel.Name = "UseDirectedHelpLabel";
             this.UseDirectedHelpLabel.Size = new System.Drawing.Size(15, 19);
             this.UseDirectedHelpLabel.TabIndex = 45;
@@ -607,7 +622,7 @@
             this.AlertDirectedHelpLabel.BackColor = System.Drawing.SystemColors.Control;
             this.AlertDirectedHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.AlertDirectedHelpLabel.ForeColor = System.Drawing.Color.Blue;
-            this.AlertDirectedHelpLabel.Location = new System.Drawing.Point(262, 280);
+            this.AlertDirectedHelpLabel.Location = new System.Drawing.Point(265, 280);
             this.AlertDirectedHelpLabel.Name = "AlertDirectedHelpLabel";
             this.AlertDirectedHelpLabel.Size = new System.Drawing.Size(15, 19);
             this.AlertDirectedHelpLabel.TabIndex = 46;
@@ -621,7 +636,7 @@
             this.LogEarlyHelpLabel.BackColor = System.Drawing.SystemColors.Control;
             this.LogEarlyHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LogEarlyHelpLabel.ForeColor = System.Drawing.Color.Blue;
-            this.LogEarlyHelpLabel.Location = new System.Drawing.Point(262, 188);
+            this.LogEarlyHelpLabel.Location = new System.Drawing.Point(265, 188);
             this.LogEarlyHelpLabel.Name = "LogEarlyHelpLabel";
             this.LogEarlyHelpLabel.Size = new System.Drawing.Size(15, 19);
             this.LogEarlyHelpLabel.TabIndex = 47;
@@ -642,7 +657,7 @@
             this.AutoReplyHelpLabel.BackColor = System.Drawing.SystemColors.Control;
             this.AutoReplyHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.AutoReplyHelpLabel.ForeColor = System.Drawing.Color.Blue;
-            this.AutoReplyHelpLabel.Location = new System.Drawing.Point(262, 304);
+            this.AutoReplyHelpLabel.Location = new System.Drawing.Point(132, 304);
             this.AutoReplyHelpLabel.Name = "AutoReplyHelpLabel";
             this.AutoReplyHelpLabel.Size = new System.Drawing.Size(15, 19);
             this.AutoReplyHelpLabel.TabIndex = 49;
@@ -650,12 +665,27 @@
             this.AutoReplyHelpLabel.Visible = false;
             this.AutoReplyHelpLabel.Click += new System.EventHandler(this.AutoReplyHelpLabel_Click);
             // 
+            // ExcludeHelpLabel
+            // 
+            this.ExcludeHelpLabel.AutoSize = true;
+            this.ExcludeHelpLabel.BackColor = System.Drawing.SystemColors.Control;
+            this.ExcludeHelpLabel.Font = new System.Drawing.Font("Segoe Print", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ExcludeHelpLabel.ForeColor = System.Drawing.Color.Blue;
+            this.ExcludeHelpLabel.Location = new System.Drawing.Point(266, 305);
+            this.ExcludeHelpLabel.Name = "ExcludeHelpLabel";
+            this.ExcludeHelpLabel.Size = new System.Drawing.Size(15, 19);
+            this.ExcludeHelpLabel.TabIndex = 50;
+            this.ExcludeHelpLabel.Text = "?";
+            this.ExcludeHelpLabel.Visible = false;
+            this.ExcludeHelpLabel.Click += new System.EventHandler(this.ExcludeHelpLabel_Click);
+            // 
             // Controller
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(295, 536);
+            this.ClientSize = new System.Drawing.Size(298, 536);
             this.Controls.Add(this.AutoReplyHelpLabel);
+            this.Controls.Add(this.ExcludeHelpLabel);
             this.Controls.Add(this.verLabel3);
             this.Controls.Add(this.LogEarlyHelpLabel);
             this.Controls.Add(this.AlertDirectedHelpLabel);
@@ -701,8 +731,8 @@
             this.Controls.Add(this.verLabel);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(311, 575);
-            this.MinimumSize = new System.Drawing.Size(311, 429);
+            this.MaximumSize = new System.Drawing.Size(314, 575);
+            this.MinimumSize = new System.Drawing.Size(314, 429);
             this.Name = "Controller";
             this.Text = "WSJT-X Controller";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Controller_FormClosing);
@@ -771,7 +801,9 @@
         public System.Windows.Forms.Label verLabel3;
         public System.Windows.Forms.CheckBox replyCqCheckBox;
         public System.Windows.Forms.Label AutoReplyHelpLabel;
-        public System.Windows.Forms.TextBox ExceptTextBox;
+        public System.Windows.Forms.CheckBox exceptCheckBox;
+        public System.Windows.Forms.TextBox exceptTextBox;
+        public System.Windows.Forms.Label ExcludeHelpLabel;
     }
 }
 

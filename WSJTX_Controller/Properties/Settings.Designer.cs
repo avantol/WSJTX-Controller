@@ -273,5 +273,43 @@ namespace WSJTX_Controller.Properties {
                 this["alwaysOnTop"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("^K[0-9]|^K[A-G,I-O,Q-Z][0-9]|^W[0-9]|^W[A-G,I-O,Q-Z][0-9]|^N[0-9]|^N[A-G,I-O,Q-Z]" +
+            "[0-9]|^A[A-G,I-O,Q-Z][0-9]|^V[A-G][0-9]|^VO|^VY|^J[A-S][0-9]|^7[J-N][0-9]|^X[A-I" +
+            "][^4]")]
+        public string exclude {
+            get {
+                return ((string)(this["exclude"]));
+            }
+            set {
+                this["exclude"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool enableExclude {
+            get {
+                return ((bool)(this["enableExclude"]));
+            }
+            set {
+                this["enableExclude"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool firstRun {
+            get {
+                return ((bool)(this["firstRun"]));
+            }
+            set {
+                this["firstRun"] = value;
+            }
+        }
     }
 }

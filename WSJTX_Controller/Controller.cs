@@ -118,7 +118,10 @@ namespace WSJTX_Controller
             useRR73CheckBox.Checked = Properties.Settings.Default.useRR73;
             skipGridCheckBox.Checked = Properties.Settings.Default.skipGrid;
             replyCqCheckBox.Checked = Properties.Settings.Default.autoReplyCq;
+            exceptCheckBox.Checked = Properties.Settings.Default.enableExclude;
             replyCqCheckBox_Click(null, null);
+            exceptCheckBox_Click(null, null);
+            exceptTextBox.Text = Properties.Settings.Default.exclude;
 
             alertTextBox.Enabled = alertCheckBox.Checked;
             alertTextBox.ForeColor = System.Drawing.Color.Gray;
@@ -182,7 +185,10 @@ namespace WSJTX_Controller
             Properties.Settings.Default.useRR73 = useRR73CheckBox.Checked;
             Properties.Settings.Default.skipGrid = skipGridCheckBox.Checked;
             Properties.Settings.Default.firstRunDateTime = wsjtxClient.firstRunDateTime;
+            Properties.Settings.Default.firstRun = false;
             Properties.Settings.Default.autoReplyCq = replyCqCheckBox.Checked;
+            Properties.Settings.Default.enableExclude = exceptCheckBox.Checked;
+            Properties.Settings.Default.exclude = exceptTextBox.Text;
 
             Properties.Settings.Default.Save();
             CloseComm();
@@ -244,9 +250,14 @@ namespace WSJTX_Controller
         {
             timer6.Stop();
             BringToFront();
-            if (MessageBox.Show($"This program can be completely automatic, you don't need to do anything for continuous CQs and replies (except to 'Enable Tx' in WSJT-X).{Environment.NewLine}{Environment.NewLine}After you're familiar with the basic automatic operation, you might be interested in more options.{Environment.NewLine}{Environment.NewLine}(You'll have the choice to see these options later){Environment.NewLine}Do you want to see more options now?", wsjtxClient.pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBox.Show($"This program can be completely automatic, you don't need to do anything for continuous CQs and replies (except to 'Enable Tx' in WSJT-X).{Environment.NewLine}{Environment.NewLine}After you're familiar with the basic automatic operation, you might be interested in more options.{Environment.NewLine}{Environment.NewLine}(You'll have the choice to see these options later){Environment.NewLine}{Environment.NewLine}Do you want to see more options now?", wsjtxClient.pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 advButton_Click(null, null);
+            }
+            if (Properties.Settings.Default.firstRun)
+            {
+                Thread.Sleep(2000);
+                MessageBox.Show($"For this program to work correctly, you must now set the 'Tx watchdog' in WSJT-X to 15 minutes or longer.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (for example, calling CQ when the band is closed).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, in the 'General' tab.{Environment.NewLine}{Environment.NewLine}After you have done this, click OK to continue.", wsjtxClient.pgmName, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -287,7 +298,7 @@ namespace WSJTX_Controller
         private void alertCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             alertTextBox.Enabled = alertCheckBox.Checked;
-            if (formLoaded && alertCheckBox.Checked) wsjtxClient.Play("beepbeep.wav");
+            if (formLoaded && alertCheckBox.Checked && !replyCqCheckBox.Checked) wsjtxClient.Play("beepbeep.wav");
 
             if (alertCheckBox.Checked && alertTextBox.Text == "(separate by spaces)")
             {
@@ -339,6 +350,12 @@ namespace WSJTX_Controller
                 ShowWindow(GetConsoleWindow(), 5);
                 Height = this.MaximumSize.Height;
                 FormBorderStyle = FormBorderStyle.Fixed3D;
+                if (wsjtxClient.advanced)
+                {
+                    exceptCheckBox.Visible = true;
+                    exceptTextBox.Visible = true;
+                    ExcludeHelpLabel.Visible = true;
+                }
                 wsjtxClient.UpdateDebug();
                 BringToFront();
             }
@@ -346,6 +363,9 @@ namespace WSJTX_Controller
             {
                 Height = this.MinimumSize.Height;
                 FormBorderStyle = FormBorderStyle.FixedSingle;
+                exceptCheckBox.Visible = false;
+                exceptTextBox.Visible = false;
+                ExcludeHelpLabel.Visible = false;
                 ShowWindow(GetConsoleWindow(), 0);
             }
         }
@@ -471,7 +491,7 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"To send directed CQs:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}- Enter an asterisk (^) for an ordinary non-directed CQ.{Environment.NewLine}- The directed CQs will be used in random order.{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}Example: EU DX *",
+                  $"To send directed CQs:{Environment.NewLine}- Enter the two-character code(s) for the directed CQs you want to transmit, separated by spaces.{Environment.NewLine}- Enter an asterisk (^) for an ordinary non-directed CQ.{Environment.NewLine}- The directed CQs will be used in random order.{Environment.NewLine}{Environment.NewLine}Example: EU DX *",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
@@ -484,7 +504,7 @@ namespace WSJTX_Controller
             string s;
             if (replyCqCheckBox.Checked)
             {
-                s = $"To reply to specific directed CQs (from callers you haven't worked yet):{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY";
+                s = $"To reply to specific directed CQs (from callers you haven't worked yet):{Environment.NewLine}- Enter the two-character code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: NA US WY{Environment.NewLine}{Environment.NewLine}For our purposes, 'CQ DX' is not specific enough to be considered 'directed', and is handled separately by 'Auto-reply to CQs'.";
             }
             else
             {
@@ -532,7 +552,22 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"If you enable 'Auto-reply to CQs', the Controller will continuously add up to {wsjtxClient.maxAutoGenEnqueue} CQs to the reply list that meet these criteria:{Environment.NewLine}{Environment.NewLine}- The caller has not already been logged on the current band, and{Environment.NewLine}- The caller hasn't been replied to more than {wsjtxClient.maxPrevCqs} times during this mode / band session, and{Environment.NewLine}- If the CQ is directed to 'DX', the caller is on a different continent, or if directed to other than 'DX', the CQ is directed to one of the codes in the 'Reply CQs directed to' list (if enabled).",
+                  $"If you enable 'Auto-reply to CQs', the Controller will continuously add up to {wsjtxClient.maxAutoGenEnqueue} CQs to the reply list that meet these conditions:{Environment.NewLine}{Environment.NewLine}- The caller has not already been logged on the current band, and{Environment.NewLine}- The caller hasn't been replied to more than {wsjtxClient.maxPrevCqs} times during this mode / band session,{Environment.NewLine}and{Environment.NewLine}- The CQ is not a 'directed' CQ, or{Environment.NewLine}if 'CQ DX': the caller is on a different continent, or{Environment.NewLine}if directed to other than 'DX': the CQ is directed to one of the codes in the 'Reply to CQ directed to' list.",
+                  wsjtxClient.pgmName,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Information
+                );
+            })).Start();
+
+        }
+        private void ExcludeHelpLabel_Click(object sender, EventArgs e)
+        {
+            //help for excluding certain directed CQs
+            new Thread(new ThreadStart(delegate
+            {
+                MessageBox.Show
+                (
+                  $"If you enable 'Exclude', the Controller can exclude call signs from 'Auto-reply to CQs'.{Environment.NewLine}{Environment.NewLine}To exclude certain call signs:{Environment.NewLine}- Enter the first letter(s) of the call signs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: W K N AA AB{Environment.NewLine}{Environment.NewLine}(For maximum flexibility, you can enter a 'Regular Expression' that will match ranges of call signs)",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
@@ -543,13 +578,15 @@ namespace WSJTX_Controller
 
         private void replyCqCheckBox_Click(object sender, EventArgs e)
         {
+            exceptCheckBox.Enabled = replyCqCheckBox.Checked;
+            exceptCheckBox_Click(sender, e);
             if (replyCqCheckBox.Checked)
             {
-                alertCheckBox.Text = "Reply CQs directed to:";
+                alertCheckBox.Text = "Reply to CQ directed to:";
             }
             else
             {
-                alertCheckBox.Text = "Alert CQs directed to:";
+                alertCheckBox.Text = "Alert for CQ directed to:";
             }
         }
 
@@ -557,6 +594,11 @@ namespace WSJTX_Controller
         {
             int idx = (e.Y - 8) / 15;
             if (idx >= 0 && idx <= WsjtxClient.maxQueueLines) wsjtxClient.EditCallQueue(idx);
+        }
+
+        private void exceptCheckBox_Click(object sender, EventArgs e)
+        {
+            exceptTextBox.Enabled = exceptCheckBox.Checked && replyCqCheckBox.Checked;
         }
     }
 }

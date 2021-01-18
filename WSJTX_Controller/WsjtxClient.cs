@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using WsjtxUdpLib.Messages;
 using WsjtxUdpLib.Messages.Out;
 using System.Drawing;
+using System.Text.RegularExpressions;
 
 namespace WSJTX_Controller
 {
@@ -777,7 +778,7 @@ namespace WSJTX_Controller
                             {
                                 if ((DateTime.Now - firstDecodeTime).TotalMinutes < 15)
                                 {
-                                    ModelessDialog("Set the 'Tx watchdog' in WSJT-X to 15 minutes or more.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (ex: Calling CQ, when the band is inactive).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, in the 'General' tab.");
+                                    ModelessDialog("Set the 'Tx watchdog' in WSJT-X to 15 minutes or longer.\n\nThis will be the timeout in case the Controller sends the same message repeatedly (for example, calling CQ when the band is closed).\n\nThe WSJT-X 'Tx watchdog' is under File | Settings, in the 'General' tab.");
                                 }
                                 else
                                 {
@@ -1612,7 +1613,7 @@ namespace WSJTX_Controller
 
             if (emsg.AutoGen)       //automatically-generated queue request
             {
-                if (advanced && ctrl.replyCqCheckBox.Checked)
+                if (advanced && ctrl.replyCqCheckBox.Checked && IsWanted(deCall))
                 {
                     DebugOutput($"{spacer}callInProg:{callInProg} callQueue.Count:{callQueue.Count} callQueue.Contains:{callQueue.Contains(deCall)}");
                     if (myCall == null || opMode != OpModes.ACTIVE
@@ -2196,6 +2197,30 @@ namespace WSJTX_Controller
             if (MessageBox.Show($"Delete {call}?", pgmName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 RemoveCall(call);
+            }
+        }
+
+        private bool IsWanted(string call)
+        {
+            if (!ctrl.exceptCheckBox.Visible || !ctrl.exceptCheckBox.Checked || ctrl.exceptTextBox.Text == "") return true;
+
+            string s = ctrl.exceptTextBox.Text.ToUpper();
+            var a = s.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (s.StartsWith("^"))
+            {
+                //regular expression
+                //^K[0-9]|^K[A-G,I-O,Q-Z][0-9]|^W[0-9]|^W[A-G,I-O,Q-Z][0-9]|^N[0-9]|^N[A-G,I-O,Q-Z][0-9]|^A[A-G,I-O,Q-Z][0-9]|^V[A-G][0-9]|^VO|^VY|^J[A-S][0-9]|^7[J-N][0-9]|^X[A-I][^4]
+                Match m = Regex.Match(call, s, RegexOptions.None);
+                return !m.Success;
+            }
+            else //match first character(s)
+            {
+                foreach (string elem in a)
+                {
+                    if (call.StartsWith(elem)) return false;
+                }
+                return true;
             }
         }
     }
