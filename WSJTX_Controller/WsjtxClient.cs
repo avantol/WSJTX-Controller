@@ -697,6 +697,9 @@ namespace WSJTX_Controller
                         DebugOutput($"{Time()} mode:{mode} (was {lastMode})");
                         ResetOpMode();
                         CheckModeSupported();
+                        txTimeout = true;       //cancel current calling
+                        callInProg = null;      //not calling anyone
+                        CheckNextXmit();
                         lastMode = mode;
                     }
 
@@ -805,12 +808,9 @@ namespace WSJTX_Controller
                     if (txFirst != lastTxFirst)
                     {
                         ClearCalls(false);
-                        if (txEnabled)
-                        {
-                            txTimeout = true;       //cancel current calling
-                            callInProg = null;      //not calling anyone
-                            CheckNextXmit();        //there won't be a decode phase, so determine next Tx now
-                        }
+                        txTimeout = true;       //cancel current calling
+                        callInProg = null;      //not calling anyone
+                        CheckNextXmit();        //there won't be a decode phase, so determine next Tx now
                         DebugOutput($"{Time()} Cleared queued calls: txFirst:{txFirst} txTimeout:{txTimeout} callInProg:{callInProg}");
                         lastTxFirst = txFirst;
                     }
