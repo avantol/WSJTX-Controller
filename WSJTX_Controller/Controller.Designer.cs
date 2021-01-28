@@ -84,6 +84,8 @@
             this.verLabel3 = new System.Windows.Forms.Label();
             this.AutoReplyHelpLabel = new System.Windows.Forms.Label();
             this.ExcludeHelpLabel = new System.Windows.Forms.Label();
+            this.label24 = new System.Windows.Forms.Label();
+            this.label25 = new System.Windows.Forms.Label();
             this.groupBox3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeoutNumUpDown)).BeginInit();
             this.SuspendLayout();
@@ -234,7 +236,7 @@
             // 
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label11.Location = new System.Drawing.Point(69, 453);
+            this.label11.Location = new System.Drawing.Point(51, 453);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(48, 13);
             this.label11.TabIndex = 27;
@@ -284,7 +286,7 @@
             // 
             this.label16.AutoSize = true;
             this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label16.Location = new System.Drawing.Point(153, 453);
+            this.label16.Location = new System.Drawing.Point(185, 453);
             this.label16.Name = "label16";
             this.label16.Size = new System.Drawing.Size(48, 13);
             this.label16.TabIndex = 32;
@@ -679,11 +681,33 @@
             this.ExcludeHelpLabel.Visible = false;
             this.ExcludeHelpLabel.Click += new System.EventHandler(this.ExcludeHelpLabel_Click);
             // 
+            // label24
+            // 
+            this.label24.AutoSize = true;
+            this.label24.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label24.Location = new System.Drawing.Point(106, 453);
+            this.label24.Name = "label24";
+            this.label24.Size = new System.Drawing.Size(48, 13);
+            this.label24.TabIndex = 51;
+            this.label24.Text = "label24";
+            // 
+            // label25
+            // 
+            this.label25.AutoSize = true;
+            this.label25.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label25.Location = new System.Drawing.Point(154, 453);
+            this.label25.Name = "label25";
+            this.label25.Size = new System.Drawing.Size(48, 13);
+            this.label25.TabIndex = 52;
+            this.label25.Text = "label25";
+            // 
             // Controller
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(298, 536);
+            this.Controls.Add(this.label25);
+            this.Controls.Add(this.label24);
             this.Controls.Add(this.AutoReplyHelpLabel);
             this.Controls.Add(this.ExcludeHelpLabel);
             this.Controls.Add(this.verLabel3);
@@ -804,6 +828,8 @@
         public System.Windows.Forms.CheckBox exceptCheckBox;
         public System.Windows.Forms.TextBox exceptTextBox;
         public System.Windows.Forms.Label ExcludeHelpLabel;
+        public System.Windows.Forms.Label label24;
+        public System.Windows.Forms.Label label25;
     }
 }
 

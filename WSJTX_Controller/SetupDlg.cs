@@ -121,6 +121,7 @@ namespace WSJTX_Controller
             addrTextBox.Text = wsjtxClient.ipAddress.ToString();
             portTextBox.Text = wsjtxClient.port.ToString();
             multicastcheckBox.Checked = wsjtxClient.multicast;
+            multicastcheckBox_CheckedChanged(null, null);
             onTopCheckBox.Checked = ctrl.alwaysOnTop;
         }
 
@@ -128,6 +129,18 @@ namespace WSJTX_Controller
         {
             //wsjtxClient.ipAddress = addrTextBox.Text;
             //wsjtxClient.port = portTextBox.Text;
+        }
+
+        private void multicastcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (multicastcheckBox.Checked)
+            {
+                addrLabel.Text = "(Typical: 239.255.0.0";
+            }
+            else
+            {
+                addrLabel.Text = "(Typical: 127.0.0.1";
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ namespace WSJTX_Controller
         private string configuration = null;
         private TimeSpan latestDecodeTime;
         private string callInProg = null;
+        private bool restartQueue = false;
 
         private WsjtxMessage.QsoStates lastQsoState = WsjtxMessage.QsoStates.INVALID;
         private UdpClient udpClient2;
@@ -467,8 +468,12 @@ namespace WSJTX_Controller
                         rawMode = dmsg.Mode;    //different from mode string in status msg
                         if (dmsg.New)           //important to reject replays requested by other pgms
                         {
-                            if (dmsg.IsCallTo(myCall)) DebugOutput($"{dmsg}\n           *msg:'{dmsg.Message}'");
-
+                            if (dmsg.IsCallTo(myCall))
+                            {
+                                DebugOutput($"{dmsg}\n           *msg:'{dmsg.Message}'");
+                                DebugOutput($"{spacer}transmitting:{transmitting} restartQueue:{restartQueue}");
+                            }
+                                
                             string deCall = dmsg.DeCall();
                             //do some processing not directly related to replying immediately
                             if (deCall != null)
@@ -485,7 +490,7 @@ namespace WSJTX_Controller
                                 if (myCall != null && dmsg.IsCallTo(myCall))
                                 {
                                     dmsg.Priority = true;       //as opposed to a decode from anyone else
-                                    UpdateDebug();
+                                    //UpdateDebug();
                                     if (ctrl.mycallCheckBox.Checked) Play("trumpet.wav");   //not the call just logged
 
                                     //if call not logged: save Report (...+03) and RogerReport (...-02) decodes for out-of-order call processing
@@ -517,9 +522,15 @@ namespace WSJTX_Controller
                                             {
                                                 DebugOutput($"{spacer}callQueue empty, autoCalling:{autoCalling}, adding '{deCall}', not currently being processed");
                                                 AddCall(deCall, dmsg);
-                                                txTimeout = true;
-                                                callInProg = null;
-                                                DebugOutput($"{spacer}qsoState:{qsoState} txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
+                                                if (transmitting)
+                                                {
+                                                    DebugOutput($"{spacer}decode overlap transmit, qsoState:{qsoState}");
+                                                }
+                                                else
+                                                {
+                                                    restartQueue = true;
+                                                    DebugOutput($"{spacer}restartQueue:{restartQueue} qsoState:{qsoState}");
+                                                }
                                             }
                                         }
                                         else   //not CALLING or call queue has entries
@@ -566,8 +577,8 @@ namespace WSJTX_Controller
                     if (msg.GetType().Name == "EnqueueDecodeMessage" && myCall != null)
                     {
                         EnqueueDecodeMessage emsg = (EnqueueDecodeMessage)msg;
+                        //DebugOutput($"EnqueueDecodeMessage: msg:'{emsg.Message}'");
                         AddSelectedCall(emsg);
-                        DebugOutput($"{Time()} AddSelectedCall: Modifier:{emsg.Modifier} AutoGen:{emsg.AutoGen}\n{emsg}");
                         UpdateDebug();
                     }
 
@@ -986,9 +997,19 @@ namespace WSJTX_Controller
         public void ProcessDecodes()
         {
             ctrl.timer2.Stop();
-            DebugOutput($"\n{Time()} ProcessDecodes:");
+            DebugOutput($"\n{Time()} ProcessDecodes: restartQueue:{restartQueue}");
+            if (restartQueue)           //queue went from empty to having entries, during decode(s) phase: restart queue processing
+            {
+                txTimeout = true;       //important to only set this now, not during decode phase, since decodes can happen after TX starts
+                tCall = null;
+                callInProg = null;
+                DebugOutput($"{spacer}qsoState:{qsoState} txTimeout:{txTimeout} tCall:'{tCall}' callInProg:'{callInProg}'");
+            }
             //check for Tx started manually during Rx
-            if (txEnabled) CheckNextXmit();
+            if (txEnabled)
+            {
+                CheckNextXmit();
+            }
             DebugOutput($"{Time()} ProcessDecodes done\n");
         }
 
@@ -1003,24 +1024,21 @@ namespace WSJTX_Controller
             DebugOutputStatus();
 
             //check for time to log early
-            //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
-            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
+            //  option enabled                   not logged    sending RRR now                 prev. recd Report   or prev. recd RogerReport  and prev. sent any report             
+            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && WsjtxMessage.IsRogers(txMsg) && (RecdReport(toCall) || RecdRogerReport(toCall)) && reportList.Contains(toCall))
             {
                 LogQso(toCall);
                 DebugOutput($"{spacer}early logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
             }
 
-            //check for QSO complete, normal logging
-            // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
-            if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
+            //check for QSO completing, normal logging
+            // not logged     sending 73 or RR73 now            prev. recd Report  or prev. recd RogerReport       prev. sent any report
+            if (!qsoLogged && WsjtxMessage.Is73orRR73(txMsg) && (RecdReport(toCall) || RecdRogerReport(toCall)) && reportList.Contains(toCall))
             {
-                DebugOutput($"{spacer}is 73, was RRR/R+XX, qsoLogged:{qsoLogged}");
-                if (!qsoLogged)
-                {
-                    LogQso(toCall);
-                    DebugOutput($"{spacer}normal logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
-                }
+                LogQso(toCall);
+                DebugOutput($"{spacer}normal logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
             }
+
             DebugOutput($"{Time()} Tx start done: txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}' toCall:'{toCall}' lastToCall:'{lastToCall}'\n           qsoLogged:{qsoLogged}\n");
             UpdateDebug();      //unconditional
         }
@@ -1049,27 +1067,28 @@ namespace WSJTX_Controller
                 DebugOutput($"{spacer}callInProg:'{callInProg}'");
             }
 
-            //save all calls a report msg was sent to
+            //save all call signs a report msg was sent to
             if ((WsjtxMessage.IsReport(txMsg) || WsjtxMessage.IsRogerReport(txMsg)) && !reportList.Contains(toCall)) reportList.Add(toCall);
 
             //check for time to log early; NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
-            //  option enabled                   correct cur and prev    just sent RRR                and previously sent +XX
-            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && toCall == lastToCall && WsjtxMessage.IsRogers(txMsg) && WsjtxMessage.IsReport(lastTxMsg))
+            //  option enabled                                 just sent RRR                and prev. recd Report  or prev. recd RogerReport   and prev. sent any report
+            if (ctrl.logEarlyCheckBox.Checked && !qsoLogged && WsjtxMessage.IsRogers(txMsg) && (RecdReport(toCall) || RecdRogerReport(toCall))  && reportList.Contains(toCall))
             {
                 LogQso(toCall);
                 DebugOutput($"{spacer}early logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
             }
-            //check for QSO complete, trigger next call in the queue
-            // correct cur and prev     prev Tx was a RRR                 or prev Tx was a R+XX                    or prev Tx was a +XX                 and cur Tx was 73
-            if (toCall == lastToCall && (WsjtxMessage.IsRogers(lastTxMsg) || WsjtxMessage.IsRogerReport(lastTxMsg) || WsjtxMessage.IsReport(lastTxMsg)) && WsjtxMessage.Is73orRR73(txMsg))
+            //check for QSO completed, trigger next call in the queue
+            if (WsjtxMessage.Is73orRR73(txMsg))
             {
                 txTimeout = true;      //timeout to Tx the next call in the queue
                 xmitCycleCount = 0;
                 autoCalling = true;
                 callInProg = null;
-                DebugOutput($"{Time()} Reset(2): (is 73, was RRR/R+XX, have queue entry) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}\n           autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                DebugOutput($"{Time()} Reset(2): (is 73 or RR73) xmitCycleCount:{xmitCycleCount} txTimeout:{txTimeout} qsoLogged:{qsoLogged}\n           autoCalling:{autoCalling} callInProg:'{callInProg}'");
+
                 //NOTE: doing this at Tx end because WSJT-X may have changed Tx msgs (between Tx start and Tx end) due to late decode for the current call
-                if (!qsoLogged)
+                //not logged   and prev. recd Report  or prev. recd RogerReport   and prev. sent any report
+                if (!qsoLogged && (RecdReport(toCall) || RecdRogerReport(toCall)) && reportList.Contains(toCall))
                 {
                     LogQso(toCall);
                     DebugOutput($"{spacer}normal logging reqd: toCall:'{toCall}' qsoLogged:{qsoLogged}");
@@ -1083,7 +1102,8 @@ namespace WSJTX_Controller
                 if (xmitCycleCount >= 0)
                 {
                     //check  for "to" call changed since last xmit end
-                    if (toCall != lastToCall && callQueue.Contains(toCall))
+                    // !restartQueue = didn't just add this call to queue during late decode thath overlapped Tx start
+                    if (!restartQueue && toCall != lastToCall && callQueue.Contains(toCall))
                     {
                         RemoveCall(toCall);         //manually switched to Txing a call that was also in the queue
                     }
@@ -1127,6 +1147,8 @@ namespace WSJTX_Controller
                 }
                 DebugOutput($"{Time()} Reset(5) (new directed CQ, or setting changed) xmitCycleCount:{xmitCycleCount} newDirCq:{newDirCq}");
             }
+
+            restartQueue = false;           //get ready for next decode phase
 
             DebugOutputStatus();
             DebugOutput($"{Time()} Tx end done\n");
@@ -1609,13 +1631,12 @@ namespace WSJTX_Controller
             //auto-generated notification of a CQ;
             //IsDx only valid for auto-generated "CQ DX" case, 
             //not for other auto-generated or any manually-selected message
-            if (emsg.AutoGen) DebugOutput($"{Time()} AddSelectedCall, AutoGen:{emsg.AutoGen} deCall:'{deCall}' IsDx:{emsg.IsDx}");
-
             if (emsg.AutoGen)       //automatically-generated queue request
             {
+                //DebugOutput($"{Time()} AddSelectedCall: AutoGen:{emsg.AutoGen} deCall:'{deCall}' IsDx:{emsg.IsDx}");
                 if (advanced && ctrl.replyCqCheckBox.Checked && IsWanted(deCall))
                 {
-                    DebugOutput($"{spacer}callInProg:{callInProg} callQueue.Count:{callQueue.Count} callQueue.Contains:{callQueue.Contains(deCall)}");
+                    //DebugOutput($"{spacer}callInProg:{callInProg} callQueue.Count:{callQueue.Count} callQueue.Contains:{callQueue.Contains(deCall)}");
                     if (myCall == null || opMode != OpModes.ACTIVE
                         || IsEvenPeriod(emsg.SinceMidnight.Seconds * 1000) == txFirst
                         || msg.Contains("...")) return;
@@ -1626,7 +1647,7 @@ namespace WSJTX_Controller
                     if (directedTo != null)
                     {
                         wantedDirected = ctrl.alertCheckBox.Checked && ctrl.alertTextBox.Text.ToUpper().Contains(directedTo);
-                        DebugOutput($"{spacer}directedTo:{directedTo} wantedDirected:{wantedDirected}");
+                        //DebugOutput($"{spacer}directedTo:{directedTo} wantedDirected:{wantedDirected}");
                         if (!((directedTo == "DX" && emsg.IsDx) || wantedDirected)) return;
                     }
 
@@ -1651,13 +1672,14 @@ namespace WSJTX_Controller
             }
 
             //manually-selected queue request
+            DebugOutput($"{Time()} AddSelectedCall: Modifier:{emsg.Modifier} AutoGen:{emsg.AutoGen}\n{emsg}");
             if (myCall == null || opMode != OpModes.ACTIVE)
             {
                 ctrl.ShowMsg("Not ready to add calls yet", true);
                 return;
             }
 
-            if (!emsg.Modifier && IsEvenPeriod(emsg.SinceMidnight.Seconds * 1000) == txFirst)
+            if (IsEvenPeriod(emsg.SinceMidnight.Seconds * 1000) == txFirst)
             {
                 string s = txFirst ? "odd" : "even/1st";
                 ctrl.ShowMsg($"Select calls in '{s}' sequence", true);
@@ -1692,6 +1714,11 @@ namespace WSJTX_Controller
                     ctrl.ShowMsg($"{toCall} is to this station", true);
                     return;
                 }
+                if (!txEnabled)
+                {
+                    ctrl.ShowMsg($"Select 'Enable Tx' first", true);
+                    return;
+                }
 
                 DebugOutput($"{Time()} ctrl/alt/dbl-click on {toCall}");
                 //build a CQ message to reply to
@@ -1712,14 +1739,14 @@ namespace WSJTX_Controller
                 ClearCalls(false);                       //nothing left to do this tx period
                 AddCall(toCall, nmsg);              //add to call queue
 
-                if (txEnabled)
-                {
-                    txTimeout = true;                   //immediate switch to other tx period
-                    autoCalling = true;
-                    callInProg = null;
-                    DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}' autoCalling:{autoCalling} callInProg:'{callInProg}'");
-                    CheckNextXmit();
-                }
+
+                txTimeout = true;                   //switch to other tx period
+                autoCalling = true;
+                callInProg = null;
+                DebugOutput($"{spacer}txTimeout:{txTimeout} tCall:'{tCall}' autoCalling:{autoCalling} callInProg:'{callInProg}'");
+                UpdateDebug();
+                CheckNextXmit();
+                lastTxFirst = !txFirst;     //inhibit CheckNextXmit() from txFirst change detection
                 Play("blip.wav");
             }
             else   //only alt key
@@ -1836,7 +1863,9 @@ namespace WSJTX_Controller
                 lastTxTimeout = txTimeout;
 
                 ctrl.label11.Text = $"txFirst: {txFirst.ToString().Substring(0, 1)}";
-                ctrl.label16.Text = $"Nego:{WsjtxMessage.NegoState}";
+                ctrl.label24.Text = $"rstQ: {restartQueue.ToString().Substring(0, 1)}";
+                ctrl.label25.Text = $"tx: {transmitting.ToString().Substring(0, 1)}";
+                ctrl.label16.Text = $"Neg:{WsjtxMessage.NegoState}";
 
                 if (txMsg != lastTxMsg && !WsjtxMessage.IsCQ(txMsg) && !WsjtxMessage.IsCQ(lastTxMsg))
                 {
@@ -2129,7 +2158,7 @@ namespace WSJTX_Controller
 
         private string CurrentStatus()
         {
-            return $"myCall:'{myCall}' callInProg:'{callInProg}' qsoState:{qsoState} lastQsoState:{lastQsoState} txMsg:'{txMsg}'\n           lastTxMsg:'{lastTxMsg}' replyCmd:'{replyCmd}' curCmd:'{curCmd}'\n           txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} transmitting:{transmitting} mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} dblClk:{dblClk}\n           newDirCq:{newDirCq} tCall:'{tCall}'  qCall:'{qCall}'  qsoLogged:{qsoLogged}  decoding:{decoding}\n           {CallQueueString()}";
+            return $"myCall:'{myCall}' callInProg:'{callInProg}' qsoState:{qsoState} lastQsoState:{lastQsoState} txMsg:'{txMsg}'\n           lastTxMsg:'{lastTxMsg}' replyCmd:'{replyCmd}' curCmd:'{curCmd}'\n           txTimeout:{txTimeout} xmitCycleCount:{xmitCycleCount} transmitting:{transmitting} mode:{mode} txEnabled:{txEnabled} autoCalling:{autoCalling}\n           txFirst:{txFirst} dxCall:'{dxCall}' trPeriod:{trPeriod} dblClk:{dblClk}\n           newDirCq:{newDirCq} tCall:'{tCall}' qCall:'{qCall}' qsoLogged:{qsoLogged} decoding:{decoding} restartQueue:{restartQueue}\n           {CallQueueString()}";
         }
 
         private void DebugOutputStatus()
@@ -2222,6 +2251,24 @@ namespace WSJTX_Controller
                 }
                 return true;
             }
+        }
+
+        //return true if received a R-XX or R+XX from the specified call
+        private bool RecdRogerReport(string call)
+        {
+            List<DecodeMessage> msgList;
+            if (!allCallDict.TryGetValue(call, out msgList)) return false;          //no previous call(s) from DX station
+            //DebugOutput($"{spacer}recd previous call(s)");
+            return msgList.Find(RogerReport) != null;        //the DX station never sent R-XX or R+XX
+        }
+
+        //return true if received a -XX or +XX from the specified call
+        private bool RecdReport(string call)
+        {
+            List<DecodeMessage> msgList;
+            if (!allCallDict.TryGetValue(call, out msgList)) return false;          //no previous call(s) from DX station
+            //DebugOutput($"{spacer}recd previous call(s)");
+            return msgList.Find(Report) != null;        //the DX station never sent -XX or +XX
         }
     }
 }

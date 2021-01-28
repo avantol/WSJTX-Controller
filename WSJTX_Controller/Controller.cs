@@ -224,6 +224,7 @@ namespace WSJTX_Controller
         {
             wsjtxClient.ProcessDecodes();
         }
+
         private void timer3_Tick(object sender, EventArgs e)
         {
             timer3.Stop();
