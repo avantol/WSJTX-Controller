@@ -675,6 +675,7 @@ namespace WSJTX_Controller
                             if (autoCalling)                //only cancel timeout the first time manual operation detected
                             {
                                 txTimeout = false;          //cancel timeout or settings change, which would start auto CQing
+                                qsoLogged = false;          //starting a new QSO
                                 if (txFirst == IsEvenPeriod((dtNow.Second * 1000) + dtNow.Millisecond))
                                 {
                                     xmitCycleCount = -1;         //Tx enabled during the same period Tx will happen, add one more tx cycle before timeout
