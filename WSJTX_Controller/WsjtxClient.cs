@@ -35,7 +35,7 @@ namespace WSJTX_Controller
         public string pgmName;
         public DateTime firstRunDateTime;
 
-        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/237", "2.3.0-rc2/105", "2.3.0-rc2/106", "2.3.0-rc3/107", "2.3.0-rc3/108", "2.3.0-rc3/109" };
+        private List<string> acceptableWsjtxVersions = new List<string> { "2.2.2/237", "2.3.0-rc3/108", "2.3.0/109" };
         private List<string> supportedModes = new List<string>() { "FT8", "FT4", "FST4" };
 
         //const
