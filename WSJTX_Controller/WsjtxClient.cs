@@ -161,7 +161,7 @@ namespace WSJTX_Controller
             WsjtxMessage.NegoState = WsjtxMessage.NegoStates.INITIAL;
             pgmName = ctrl.Text;      //or Assembly.GetExecutingAssembly().GetName().ToString();
 
-            logToFile = (DateTime.Now - firstRunDateTime).TotalDays < 28;
+            logToFile = (DateTime.Now - firstRunDateTime).TotalDays < 45;
             if (logToFile)
             {
                 try
