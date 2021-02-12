@@ -326,6 +326,11 @@ namespace WSJTX_Controller
                 directedTextBox.ForeColor = System.Drawing.Color.Black;
             }
             if (!directedCheckBox.Checked && directedTextBox.Text == "") directedTextBox.Text = "(separate by spaces)";
+
+            if (!directedCheckBox.Checked)
+            {
+                wsjtxClient.WsjtxSettingChanged();              //resets CQ to non-directed
+            }
         }
 
         private void loggedCheckBox_CheckedChanged(object sender, EventArgs e)
