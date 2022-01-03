@@ -27,8 +27,19 @@ namespace WsjtxUdpLib.Messages
         public int NewTxMsgIdx { get; set; }
         public string GenMsg { get; set; }
         public bool SkipGrid { get; set; }
+        public bool ReplyReqd
+        {
+            get => SkipGrid;
+            set => SkipGrid = value;
+        }
         public bool UseRR73 { get; set; }
+        public bool EnableTimeout
+        {
+            get => UseRR73;
+            set => UseRR73 = value;
+        }
         public string CmdCheck { get; set; }
+        public UInt32 Offset { get; set; }
 
         /*Public override string ToString()
         {
@@ -53,6 +64,7 @@ namespace WsjtxUdpLib.Messages
                     writer.Write(EncodeBoolean(SkipGrid));
                     writer.Write(EncodeBoolean(UseRR73));
                     writer.Write(EncodeString(CmdCheck));
+                    writer.Write(EncodeQUInt32(Offset));
                 }
                 return m.ToArray();
             }

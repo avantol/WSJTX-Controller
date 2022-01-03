@@ -74,5 +74,11 @@
     <Setting Name="firstRun" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="margin" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">650</Value>
+    </Setting>
+    <Setting Name="diagLog" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

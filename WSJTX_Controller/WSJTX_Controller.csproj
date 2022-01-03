@@ -51,7 +51,7 @@
     <StartupObject />
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Resources/netfol.ico</ApplicationIcon>
+    <ApplicationIcon>netfol.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <NoWin32Manifest>true</NoWin32Manifest>
@@ -70,6 +70,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IniFile.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="ErrorDlg.cs">
       <SubType>Form</SubType>
@@ -129,6 +130,7 @@
     </Compile>
     <EmbeddedResource Include="Controller.resx">
       <DependentUpon>Controller.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="SetupDlg.resx">
       <DependentUpon>SetupDlg.cs</DependentUpon>
@@ -172,6 +174,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="netfol.ico" />
     <Content Include="Properties\netfol.ico" />
     <Content Include="Resources\netfol.ico" />
   </ItemGroup>

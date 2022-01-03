@@ -29,6 +29,8 @@
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.addrLabel = new System.Windows.Forms.Label();
             this.multicastcheckBox = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
@@ -37,8 +39,7 @@
             this.OkButton = new System.Windows.Forms.Button();
             this.CancelButton = new System.Windows.Forms.Button();
             this.onTopCheckBox = new System.Windows.Forms.CheckBox();
-            this.addrLabel = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
+            this.diagLogCheckBox = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -57,6 +58,24 @@
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "UDP settings";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(210, 52);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(86, 13);
+            this.label4.TabIndex = 6;
+            this.label4.Text = "(Standard: 2237)";
+            // 
+            // addrLabel
+            // 
+            this.addrLabel.AutoSize = true;
+            this.addrLabel.Location = new System.Drawing.Point(209, 22);
+            this.addrLabel.Name = "addrLabel";
+            this.addrLabel.Size = new System.Drawing.Size(107, 13);
+            this.addrLabel.TabIndex = 5;
+            this.addrLabel.Text = "(Typical: 239.255.0.0";
             // 
             // multicastcheckBox
             // 
@@ -103,7 +122,7 @@
             // 
             // OkButton
             // 
-            this.OkButton.Location = new System.Drawing.Point(105, 171);
+            this.OkButton.Location = new System.Drawing.Point(105, 214);
             this.OkButton.Name = "OkButton";
             this.OkButton.Size = new System.Drawing.Size(75, 23);
             this.OkButton.TabIndex = 1;
@@ -113,7 +132,7 @@
             // 
             // CancelButton
             // 
-            this.CancelButton.Location = new System.Drawing.Point(210, 171);
+            this.CancelButton.Location = new System.Drawing.Point(210, 214);
             this.CancelButton.Name = "CancelButton";
             this.CancelButton.Size = new System.Drawing.Size(75, 23);
             this.CancelButton.TabIndex = 2;
@@ -131,29 +150,23 @@
             this.onTopCheckBox.Text = "Controller always on top";
             this.onTopCheckBox.UseVisualStyleBackColor = true;
             // 
-            // addrLabel
+            // diagLogCheckBox
             // 
-            this.addrLabel.AutoSize = true;
-            this.addrLabel.Location = new System.Drawing.Point(209, 22);
-            this.addrLabel.Name = "addrLabel";
-            this.addrLabel.Size = new System.Drawing.Size(107, 13);
-            this.addrLabel.TabIndex = 5;
-            this.addrLabel.Text = "(Typical: 239.255.0.0";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(210, 52);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(86, 13);
-            this.label4.TabIndex = 6;
-            this.label4.Text = "(Standard: 2237)";
+            this.diagLogCheckBox.AutoSize = true;
+            this.diagLogCheckBox.Location = new System.Drawing.Point(23, 161);
+            this.diagLogCheckBox.Name = "diagLogCheckBox";
+            this.diagLogCheckBox.Size = new System.Drawing.Size(115, 17);
+            this.diagLogCheckBox.TabIndex = 6;
+            this.diagLogCheckBox.Text = "Log diagnostic info";
+            this.diagLogCheckBox.UseVisualStyleBackColor = true;
+            this.diagLogCheckBox.Visible = false;
             // 
             // SetupDlg
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(385, 204);
+            this.ClientSize = new System.Drawing.Size(385, 244);
+            this.Controls.Add(this.diagLogCheckBox);
             this.Controls.Add(this.onTopCheckBox);
             this.Controls.Add(this.CancelButton);
             this.Controls.Add(this.OkButton);
@@ -183,5 +196,6 @@
         private System.Windows.Forms.CheckBox onTopCheckBox;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label addrLabel;
+        private System.Windows.Forms.CheckBox diagLogCheckBox;
     }
 }

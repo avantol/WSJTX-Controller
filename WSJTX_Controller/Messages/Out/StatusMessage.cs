@@ -120,6 +120,7 @@ namespace WsjtxUdpLib.Messages.Out
                     statusMessage.TxFirst = DecodeBool(message, ref cur);
                     statusMessage.DblClk = DecodeBool(message, ref cur);
                     if (cur < message.Length) statusMessage.Check = DecodeString(message, ref cur);
+                    if (cur < message.Length) statusMessage.TxHaltClk = DecodeBool(message, ref cur);
                 }
             }
 
@@ -153,6 +154,7 @@ namespace WsjtxUdpLib.Messages.Out
         public bool TxFirst { get; set; }
         public bool DblClk { get; set; }
         public string Check { get; set; }
+        public bool TxHaltClk { get; set; }
 
         public QsoStates CurQsoState()
         {

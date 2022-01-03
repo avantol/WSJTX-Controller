@@ -59,7 +59,7 @@ namespace WsjtxUdpLib.Messages
         public bool UseStdReply { get; set; }
         public byte Modifiers { get; set; }
 
-        /*public override string ToString()
+        public override string ToString()
         {
             var sb = new StringBuilder();
             sb.Append("Reply     ");
@@ -72,7 +72,7 @@ namespace WsjtxUdpLib.Messages
             sb.Append($"{Col(Message, 20, Align.Left)} ");
 
             return sb.ToString();
-        }*/
+        }
         public byte[] GetBytes()
         {
             using (MemoryStream m = new MemoryStream())
@@ -95,6 +95,6 @@ namespace WsjtxUdpLib.Messages
                 return m.ToArray();
             }
         }
-        public override string ToString() => $"Reply      {this.ToCompactLine(nameof(Id))}";
+        //public override string ToString() => $"Reply      {this.ToCompactLine(nameof(Id))}";
     }
 }

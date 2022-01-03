@@ -157,6 +157,17 @@ namespace WsjtxUdpLib.Messages.Out
             return WsjtxMessage.IsCQ(Message);
         }
 
+        public bool IsContest()
+        {
+            return WsjtxMessage.IsContest(Message);
+        }
+
+        public bool IsPotaOrSota()
+        {
+            return WsjtxMessage.IsPotaOrSota(Message);
+        }
+
+
         public string DeCall()
         {
             return WsjtxMessage.DeCall(Message);
@@ -238,6 +249,23 @@ namespace WsjtxUdpLib.Messages.Out
         public bool AutoGen { get; set; }       //only CQ messages, and sent w/o manual intervention in WSJT-X
         public bool IsDx { get; set; }          //only calculated for case of "CQ DX" message, true = different continent from this QTH
 
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.Append("EnqDecode  ");
+            sb.Append($"{Col(SinceMidnight, 8, Align.Left)} ");
+            sb.Append($"{Col(Snr, 3, Align.Right)} ");
+            sb.Append($"{Col(DeltaFrequency, 4, Align.Right)} ");
+            sb.Append($"{Col(DeltaTime, 4, Align.Right)} ");
+            sb.Append($"{Col(Mode, 1, Align.Left)} ");
+            sb.Append($"{(UseStdReply ? "SR" : "  ")} ");
+            sb.Append($"{Col(Message, 20, Align.Left)} ");
+            sb.Append($"{Col(Modifier, 5, Align.Left)} ");
+            sb.Append($"{Col(AutoGen, 5, Align.Left)} ");
+            sb.Append($"{Col(IsDx, 5, Align.Left)} ");
+
+            return sb.ToString();
+        }
         public static new WsjtxMessage Parse(byte[] message)
         {
             if (!CheckMagicNumber(message))

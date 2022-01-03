@@ -40,27 +40,29 @@ namespace WsjtxUdpLib.Messages.Out
         //if a CQ return "CQ", if no/invalid/non-std msg, return null
         public static string ToCall(string msg)
         {
-            if (msg == null) return null;
-            msg = RemoveAngleBrackets(msg);
+            if (IsInvalid(msg)) return null;
             string[] words = msg.Split(new char[]{' '}, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Count() < 2 || words.Count() > 4 || words[0].Contains("...")) return null;
+            if (words.Count() < 2 || words.Count() > 4) return null;
             if (words[0] == "CQ") return "CQ";
             return words[0];
         }
 
         public static string DeCall(string msg)
         {
-            //return the "from" call from the msg in the form "W1AW K1JT FN60" or "CQ K1JT FN60" or "CQ NA K1JT FN60"
+            //return the "from" call from the msg in the form "W1AW K1JT FN60" or "W1AW <...> FN60
+            //or "CQ K1JT FN60" or "CQ NA K1JT FN60" or "CQ POTA K1JT"
+            //but not CQ WY SD K1JT
             //if non-std or invalid msg, return null
-            if (msg == null) return null;
-            msg = RemoveAngleBrackets(msg);
+            if (IsInvalid(msg)) return null;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() < 2 || words.Count() > 4) return null;
-            if (words[0].Contains("CQ") && words.Count() == 4)      //directed CQ
+            if (IsCQ(msg))                              //CQ msg
             {
-                return words[2];
+                if (DirectedTo(msg) != null)            //directed CQ msg
+                {
+                    return words[2];
+                }
             }
-            if (words[1].Contains("...")) return null;
             return words[1];
         }
 
@@ -72,12 +74,22 @@ namespace WsjtxUdpLib.Messages.Out
             return s;
         }
 
+        private static bool IsAlphaOnly(string s)
+        {
+            return s.IndexOfAny(new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' }) == 0;
+        }
+
+        private static bool IsInvalid(string msg)
+        {
+            return msg == null || msg.Contains("...") || msg.Contains('<') || msg.Contains('>');
+        }
+
         //there are grid codes that *contain* "73", so test for *exactly* "73" or "RR73";
         //msgs in the form "W1AW K1JT 73" or "W1AW K1JT RR73";
         //custom 73 msgs are not acceptable
         public static bool Is73orRR73(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             return (words[2] == "73" || words[2] == "RR73");
@@ -88,21 +100,30 @@ namespace WsjtxUdpLib.Messages.Out
         //custom 73 msgs are not acceptable
         public static bool Is73(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             return (words[2] == "73");
         }
 
+        //msg only in the form "CQ K1JT" or "CQ K1JT EM51" 
+        //or "CQ WY K1JT" or "CQ WY K1JT EM51" or "CQ USA K1JT" or "CQ USA K1JT EM51"
+        //or "CQ ASIA K1JT EM51" or "CQ POTA K1JT"
+        //but not "CQ WY SD K1JT EM51" or "CQ WY SD K1JT" (not std msgs)
         public static bool IsCQ(string msg)
         {
-            return ToCall(msg) == "CQ";
+            if (ToCall(msg) != "CQ") return false;
+            //known to be 2, 3, or 4 words
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            //not "CQ WY SD K1JT" or "CQ USA EUR K1JT" (not std msg)
+            if (words.Count() == 4 && IsAlphaOnly(words[1]) && IsAlphaOnly(words[2])) return false;
+            return true;
         }
 
         //msg in the form "W1AW K1JT RRR"
         public static bool IsRogers(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             return (words[2] == "RRR");
@@ -111,7 +132,7 @@ namespace WsjtxUdpLib.Messages.Out
         //msg in the form "W1AW K1JT R-03" or "W1AW K1JT R+12"
         public static bool IsRogerReport(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             if (!words[2].Contains("R+") && !words[2].Contains("R-")) return false;
@@ -121,7 +142,7 @@ namespace WsjtxUdpLib.Messages.Out
         //msg in the form "W1AW K1JT -03" or "W1AW K1JT +12"
         public static bool IsReport(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             if (!words[2].Contains("+") && !words[2].Contains("-")) return false;
@@ -132,29 +153,67 @@ namespace WsjtxUdpLib.Messages.Out
         //msg in the form "W1AW K1JT FN62"
         public static bool IsReply(string msg)
         {
-            if (msg == null) return false;
+            if (IsInvalid(msg)) return false;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Count() != 3) return false;
             if (IsRogerReport(msg) || IsRogers(msg) || IsCQ(msg) || Is73orRR73(msg)) return false;
-            if (words[2].Length != 4) return false;
-            int i;
-            if (!int.TryParse(words[2].Substring(2, 2), out i)) return false;
-            if (int.TryParse(words[2].Substring(0, 1), out i)) return false;
-            if (int.TryParse(words[2].Substring(1, 1), out i)) return false;
-            return true;
+            return IsGridFormat(words[2]);
         }
 
-        //return the "directed to" part of the call (if exists) in a possible CQ msg
-        //msg only in the form "CQ WY K1JT" or "CQ WY K1JT EM51"
-        //not acceptable: "CQ USA K1JT" or "CQ USA K1JT EM51" or "CQ WY SD K1JT" or "CQ WY SD K1JT EM51"
-        //(reason: 3-char "to" not distinguishable from a call sign, multiple "to" not std msgs)
+        //similar to: "CQ RU K1JT" or "CQ TEST" or "W1AW K1JT 559 WY" or "W1AW K1JT R 559 WY"
+        //or "W1AW K1JT R 559 0002" "W1AW K1JT 569 0021"
+        public static bool IsContest(string msg)
+        {
+            if (IsInvalid(msg)) return false;
+            //"CQ RU K1JT"
+            if (IsCQ(msg))
+            {
+                string dirTo = DirectedTo(msg);
+                return dirTo == "RU" || dirTo == "TEST";
+            }
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Count() < 4) return false;
+            int i;
+            //"W1AW K1JT 559 WY"
+            //   0   1   2   3
+            if (words[2].Length == 3 && int.TryParse(words[2], out i) && words[3].Length == 2) return true;
+            //"W1AW K1JT 569 0021"
+            //   0   1    2   3
+            if (words.Count() == 4 && words[2].Length == 3 && int.TryParse(words[2], out i) && words[3].Length == 4 && int.TryParse(words[3], out i)) return true;
+            //"W1AW K1JT R 559 WY"
+            //   0   1   2  3  4
+            if (words.Count() == 5 && words[2] == "R" && words[3].Length == 3 && int.TryParse(words[3], out i) && words[4].Length == 2) return true;
+            //"W1AW K1JT R 559 0002"
+            //   0   1   2  3   4
+            if (words.Count() == 5 && words[2] == "R" && words[3].Length == 3 && int.TryParse(words[3], out i) && words[4].Length == 4 && int.TryParse(words[4], out i)) return true;
+            return false;
+        }
+
+        public static bool IsPotaOrSota(string msg)
+        {
+            //known to be a CQ
+            string dirTo = DirectedTo(msg);
+            return dirTo != null && (dirTo == "POTA" || dirTo == "SOTA");
+        }
+
+        //return the "directed to" part of the CQ call (if exists) in a possible CQ msg
+        //msg only in the form "CQ WY K1JT" or "CQ WY K1JT EM51" or "CQ USA K1JT" 
+        //or "CQ USA K1JT EM51"or "CQ ASIA K1JT EM51" or "CQ POTA K1JT"
+        //but not "CQ WY SD K1JT EM51" or "CQ WY SD K1JT" (not std msgs) or "CQ K1JT"
         //if not a directed CQ msg msg, return null
         public static string DirectedTo(string msg)
         {
-            if (msg == null) return null;
+            if (IsInvalid(msg)) return null;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            //not "CQ K1JT"
             if (words.Count() < 3 || words.Count() > 4) return null;
-            if (words[0] != "CQ" || words[1].Length != 2) return null;
+            //not K1JT WM8Q DN61
+            if (words[0] != "CQ") return null;
+            //not "CQ K1JT EM51"
+            if (words.Count() == 3 && !IsAlphaOnly(words[1]) && IsGridFormat(words[2])) return null;
+            //not "CQ WY SD K1JT" 
+            if (words.Count() == 4 && IsAlphaOnly(words[1]) && IsAlphaOnly(words[2])) return null;
+            //is "CQ USA K1JT EM51" or "CQ USA K1JT" 
             return words[1];
         }
 
@@ -163,11 +222,39 @@ namespace WsjtxUdpLib.Messages.Out
         //return null if neither a Report or a RogerReport
         public static string RstRecd(string msg)
         {
-            if (msg == null) return null;
+            if (IsInvalid(msg)) return null;
             if (!IsReport(msg) && !IsRogerReport(msg)) return null;
             string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             //already know words.Length and validity of numeric value
             return words[2].Replace("R", "");
+        }
+
+        //return the grid from a Reply or CQ
+        //ex: "DN61"
+        public static string Grid(string msg)
+        {
+            string[] words = msg.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (IsReply(msg))
+            {
+                return words[2];        //grid format already validated
+            }
+            if (IsCQ(msg))
+            {
+                if (words.Length < 3) return null;
+                string grid = words[words.Count() - 1];
+                if (IsGridFormat(grid)) return grid;
+            }
+            return null;
+        }
+
+        //ex: "DN61"
+        public static bool IsGridFormat(string grid)
+        {
+            if (grid == null || grid.Length != 4) return false;
+            int i;
+            if (!int.TryParse(grid.Substring(2, 2), out i)) return false;
+            if (int.TryParse(grid.Substring(0, 2), out i)) return false;
+            return true;
         }
 
         public static void Reinit()

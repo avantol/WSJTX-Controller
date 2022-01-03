@@ -25,6 +25,8 @@ namespace WSJTX_Controller
         public WsjtxClient wsjtxClient;
         public Controller ctrl;
 
+        private Int16 adj;
+
         private void CancelButton_Click(object sender, EventArgs e)
         {
             ctrl.SetupDlgClosed();
@@ -101,7 +103,7 @@ namespace WSJTX_Controller
             //if no change, no need to notify/exit
             if (wsjtxClient.ipAddress.ToString() == ipAddress.ToString() && wsjtxClient.port == port && wsjtxClient.multicast == multicast)
             {
-                ctrl.alwaysOnTop = onTopCheckBox.Checked;
+                SaveMisc();
                 ctrl.SetupDlgClosed();
                 Close();
                 return;
@@ -110,10 +112,16 @@ namespace WSJTX_Controller
             res = MessageBox.Show($"{wsjtxClient.pgmName} will exit now, restart {wsjtxClient.pgmName} for the new settings to take effect", wsjtxClient.pgmName, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
             if (res == DialogResult.Cancel) return;
 
-            ctrl.alwaysOnTop = onTopCheckBox.Checked;
+            SaveMisc();
             wsjtxClient.UpdateAddrPortMulti(ipAddress, port, multicast);
             ctrl.SetupDlgClosed();
             Close();
+        }
+
+        private void SaveMisc()
+        {
+            ctrl.alwaysOnTop = onTopCheckBox.Checked;
+            wsjtxClient.LogModeChanged(diagLogCheckBox.Checked);
         }
 
         private void SetupDlg_Load(object sender, EventArgs e)
@@ -123,6 +131,8 @@ namespace WSJTX_Controller
             multicastcheckBox.Checked = wsjtxClient.multicast;
             multicastcheckBox_CheckedChanged(null, null);
             onTopCheckBox.Checked = ctrl.alwaysOnTop;
+            diagLogCheckBox.Checked = wsjtxClient.diagLog;
+            diagLogCheckBox.Visible = true;
         }
 
         private void SetupDlg_FormClosing(object sender, FormClosingEventArgs e)

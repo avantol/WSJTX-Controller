@@ -311,5 +311,29 @@ namespace WSJTX_Controller.Properties {
                 this["firstRun"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("650")]
+        public int margin {
+            get {
+                return ((int)(this["margin"]));
+            }
+            set {
+                this["margin"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool diagLog {
+            get {
+                return ((bool)(this["diagLog"]));
+            }
+            set {
+                this["diagLog"] = value;
+            }
+        }
     }
 }

@@ -28,5 +28,5 @@ C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Con
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.exe
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.pdb
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.SetupDlg.resources
-C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.csprojAssemblyReference.cache
 C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.ErrorDlg.resources
+C:\Users\John\source\repos\WSJTX-Controller\WSJTX_Controller\obj\Debug\WSJTX_Controller.csprojAssemblyReference.cache
