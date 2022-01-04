@@ -3516,7 +3516,7 @@ namespace WSJTX_Controller
 
         private int CalcTimerAdj()
         {
-            return (mode == "FT8" ? 0 : (mode == "FT4" ? 300 : (mode == "FST4" ? 750 : 0)));      //msec
+            return (mode == "FT8" ? 300 : (mode == "FT4" ? 300 : (mode == "FST4" ? 750 : 300)));      //msec
         }
     }
 }
