@@ -375,15 +375,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:WSJT-X Controller"
-        "ProductCode" = "8:{2638985F-8843-41A2-AD81-E3517832E5DD}"
-        "PackageCode" = "8:{38FDB27C-14D6-46A3-A8DA-F398E8D817F9}"
+        "ProductCode" = "8:{F067AB20-E3B0-4510-A5A4-C8FC7C1DC24C}"
+        "PackageCode" = "8:{5156F605-912A-409C-B08A-AF45AAB3EBB3}"
         "UpgradeCode" = "8:{58863A86-1E9E-4ECA-8AF5-C8BEE7AB4238}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:1.155.0"
+        "ProductVersion" = "8:1.156.0"
         "Manufacturer" = "8:WM8Q"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
@@ -925,7 +925,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_13955C8D95C14416A597653571C6CA17"
             {
-            "SourcePath" = "8:..\\WSJTX_Controller\\obj\\Release\\WSJTX_Controller.exe"
+            "SourcePath" = "8:"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_F9097703E65145C3AE3E9348ED10AEA6"

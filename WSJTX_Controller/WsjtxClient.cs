@@ -337,7 +337,7 @@ namespace WSJTX_Controller
         {
             if (enabled)
             {
-                if (commConfirmed) EnableMonitoring();
+                //if (commConfirmed) EnableMonitoring();       may crash WSJT-X
                 if ((oddOffset > 0 && evenOffset > 0) || opMode != OpModes.ACTIVE) return;
 
                 ctrl.freqCheckBox.Text = "Select best TX frequency (pending)";
@@ -491,6 +491,7 @@ namespace WSJTX_Controller
         public void WsjtxSettingChanged()
         {
             settingChanged = true;
+            newDirCq = true;
         }
 
         public void Pause()
@@ -697,7 +698,7 @@ namespace WSJTX_Controller
                 heartbeatRecdTimer.Start();
                 DebugOutput($"{spacer}heartbeatRecdTimer restarted");
 
-                if (ctrl.freqCheckBox.Checked && commConfirmed) EnableMonitoring();
+                //if (ctrl.freqCheckBox.Checked && commConfirmed) EnableMonitoring();   may crash WSJT-X
             }
 
             if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.RECD)
