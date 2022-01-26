@@ -267,7 +267,7 @@ namespace WSJTX_Controller
 
             ReadPotaLogDict();
 
-            heartbeatRecdTimer.Interval = 20000;            //heartbeats every 15 sec
+            heartbeatRecdTimer.Interval = 60000;            //heartbeats every 15 sec
             heartbeatRecdTimer.Tick += new System.EventHandler(HeartbeatNotRecd);
 
             UpdateDebug();          //last before starting loop
@@ -3251,7 +3251,8 @@ namespace WSJTX_Controller
             //no heartbeat from WSJT-X, re-init communication
             heartbeatRecdTimer.Stop();
             DebugOutput($"{Time()} heartbeatRecdTimer timed out");
-            ctrl.ShowMsg("WSJT-X disconnected", true);
+            ctrl.ShowMsg("WSJT-X disconnected", false);
+            Play("dive.wav");
             ResetNego();
         }
 
