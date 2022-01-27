@@ -103,6 +103,10 @@ namespace WsjtxUdpLib.Messages.Out
             statusMessage.TxDF = DecodeQUInt32(message, ref cur);
             statusMessage.DeCall = DecodeString(message, ref cur);
             statusMessage.DeGrid = DecodeString(message, ref cur);
+            if (statusMessage.DeGrid.Length > 4)
+            {
+                statusMessage.DeGrid = statusMessage.DeGrid.Substring(0, 4);
+            }
             statusMessage.DxGrid = DecodeString(message, ref cur);
             statusMessage.TxWatchdog = DecodeBool(message, ref cur);
             statusMessage.Submode = DecodeString(message, ref cur);

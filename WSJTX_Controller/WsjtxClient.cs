@@ -907,7 +907,24 @@ namespace WSJTX_Controller
                         DebugOutput($"{Time()} Check cmd rec'd, match");
                     }
 
-                    if (myCall == null) CheckMyCall(smsg);
+                    if (myCall == null || myGrid == null)
+                    {
+                        CheckMyCall(smsg);
+                    }
+                    else
+                    {
+                        if (myCall != smsg.DeCall || myGrid != smsg.DeGrid)
+                        {
+                            DebugOutput($"{Time()} Call or grid changed, myCall:{smsg.DeCall} (was {myCall} myGrid:{smsg.DeGrid} (was {myGrid})");
+                            myCall = smsg.DeCall;
+                            myGrid = smsg.DeGrid;
+
+                            ResetOpMode(false);
+                            txTimeout = true;       //cancel current calling
+                            SetCallInProg(null);    //not calling anyone
+                            if (!paused) CheckNextXmit();
+                        }
+                    }
 
                     //detect xmit start/end ASAP
                     if (trPeriod != null && transmitting != lastXmitting)
@@ -1266,10 +1283,10 @@ namespace WSJTX_Controller
 
         private bool CheckMyCall(StatusMessage smsg)
         {
-            if (smsg.DeCall == null || smsg.DeGrid == null)
+            if (smsg.DeCall == null || smsg.DeGrid == null || smsg.DeGrid.Length < 4)
             {
                 suspendComm = true;
-                MessageBox.Show($"Call sign and Grid are not entered in WSJT-X.\n\nEnter these in WSJT-X by selecting 'File | Settings' in the 'General' tab.\n\n{pgmName} will try again when you close this dialog.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Call sign and Grid are not entered in WSJT-X.\n\nEnter these in WSJT-X by selecting 'File | Settings' in the 'General' tab.\n\n(Grid must be at least 4 characters)\n\n{pgmName} will try again when you close this dialog.", pgmName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 ResetNego();
                 suspendComm = false;
                 return false;
@@ -1279,12 +1296,9 @@ namespace WSJTX_Controller
             {
                 myCall = smsg.DeCall;
                 myGrid = smsg.DeGrid;
-                if (myGrid.Length > 4)
-                {
-                    myGrid = myGrid.Substring(0, 4);
-                }
-                DebugOutput($"{Time()} myCall:{myCall} myGrid:{myGrid}");
+                DebugOutput($"{Time()} CheckMyCall myCall:{myCall} myGrid:{myGrid}");
             }
+
             UpdateDebug();
             return true;
         }
