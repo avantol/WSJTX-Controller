@@ -3265,8 +3265,11 @@ namespace WSJTX_Controller
             //no heartbeat from WSJT-X, re-init communication
             heartbeatRecdTimer.Stop();
             DebugOutput($"{Time()} heartbeatRecdTimer timed out");
-            ctrl.ShowMsg("WSJT-X disconnected", false);
-            Play("dive.wav");
+            if (WsjtxMessage.NegoState == WsjtxMessage.NegoStates.RECD)
+            {
+                ctrl.ShowMsg("WSJT-X disconnected", false);
+                Play("dive.wav");
+            }
             ResetNego();
         }
 
