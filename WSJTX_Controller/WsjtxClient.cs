@@ -831,10 +831,8 @@ namespace WSJTX_Controller
                                                 DebugOutput($"{spacer}{deCall} is callInProg, txTimeout:{txTimeout}");
                                                 if (txTimeout && deCall == tCall)    //just timed out at last Tx
                                                 {
-                                                    txTimeout = false;      //cancel the timeout
-                                                    tCall = null;
-                                                    DebugOutput($"{spacer}cancelled timeout for {deCall}, txTimeout:{txTimeout} tCall:{tCall}");
-                                                    AddCall(deCall, dmsg);
+                                                    restartQueue = true;
+                                                    DebugOutput($"{spacer}Timeout at last Tx for {deCall}, restartQueue:{restartQueue}");
                                                 }
                                             }
                                         }

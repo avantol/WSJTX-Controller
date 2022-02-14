@@ -571,7 +571,7 @@ namespace WSJTX_Controller
             {
                 MessageBox.Show
                 (
-                  $"To reply to specific directed CQs from callers you haven't worked yet:{Environment.NewLine}- Enter the code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: POTA NA USA WY{Environment.NewLine}{Environment.NewLine}'CQ DX' is replied to only if the caller is on a different continent from this station.{Environment.NewLine}{Environment.NewLine}(Note: 'CQ POTA' is an exception to the 'already worked' rule, these calls will cause an auto-reply if you haven't already logged that call in the current mode/band in the current session).",
+                  $"To reply to specific directed CQs from callers you haven't worked yet:{Environment.NewLine}- Enter the code(s) for the directed CQs, separated by spaces.{Environment.NewLine}{Environment.NewLine}Example: POTA NA USA WY{Environment.NewLine}{Environment.NewLine}'CQ DX' is replied to only if the caller is on a different continent from this station.{Environment.NewLine}{Environment.NewLine}(Note: 'CQ POTA' or 'CQ SOTA' is an exception to the 'already worked' rule, these calls will cause an auto-reply if you haven't already logged that call in the current mode/band in the current day).",
                   wsjtxClient.pgmName,
                   MessageBoxButtons.OK,
                   MessageBoxIcon.Information
