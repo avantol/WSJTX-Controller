@@ -143,6 +143,7 @@ namespace WSJTX_Controller
         int lastEvenOffset = 0;
         const int offsetLoLimit = 300;
         const int offsetHiLimit = 2800;
+        bool skipAudioOffsetCalc = true;
         const int maxTxTimeHrs = 4;      //hours
         const int maxDecodeAgeMinutes = 30;
         DateTime txStopDateTime = DateTime.MaxValue;
@@ -1800,6 +1801,7 @@ namespace WSJTX_Controller
             period = Periods.UNK;
             oddOffset = 0;
             evenOffset = 0;
+            skipAudioOffsetCalc = true;         //wait for complete set of decodes
         }
 
         private void UpdateAddCall()
@@ -3255,7 +3257,11 @@ namespace WSJTX_Controller
             firstDecodePass = true;
             DebugOutput($"{Time()} Last decode completed, decodeEndTimer stop, firstDecodePass:{firstDecodePass}");
 
-            CalcBestOffset(audioOffsets, period);       //calc for period when decodes started
+            if (!skipAudioOffsetCalc)
+            {
+                CalcBestOffset(audioOffsets, period);       //calc for period when decodes started
+            }
+            skipAudioOffsetCalc = false;
         }
 
         private void HeartbeatNotRecd(object sender, EventArgs e)
@@ -3447,6 +3453,13 @@ namespace WSJTX_Controller
 
         private void CalcBestOffset(List<int> offsetList, Periods decodePeriod)
         {
+            if (period == Periods.UNK)
+            {
+                oddOffset = 0;
+                evenOffset = 0;
+                return;
+            }
+
             int bestOffset = 0;
             int maxInterval = 0;
 
