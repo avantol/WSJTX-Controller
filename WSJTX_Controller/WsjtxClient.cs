@@ -2233,7 +2233,7 @@ namespace WSJTX_Controller
                         case (int)OpModes.START:
                             if (ctrl.freqCheckBox.Checked)
                             {
-                                status = "Analyzing RX data, wait until ready";
+                                status = "Analyzing RX data, no TX until ready";
                             }
                             else
                             {
@@ -2889,7 +2889,7 @@ namespace WSJTX_Controller
                 string g = WsjtxMessage.Grid(gridMsg.Message);
                 if (g != null) grid = g;                //CQ does have a grid
             }
-            string freq = ((dialFrequency + txOffset) / 1e6).ToString("F6");
+            string freq = ((dialFrequency + txOffset) / 1e6).ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
             string band = FreqToBand(dialFrequency / 1e6);
 
             string adifRecord = $"<call:{call.Length}>{call} <gridsquare:{grid.Length}>{grid} <mode:{mode.Length}>{mode} <rst_sent:{rstSent.Length}>{rstSent} <rst_rcvd:{rstRecd.Length}>{rstRecd} <qso_date:{qsoDateOn.Length}>{qsoDateOn} <time_on:{qsoTimeOn.Length}>{qsoTimeOn} <qso_date_off:{qsoDateOff.Length}>{qsoDateOff} <time_off:{qsoTimeOff.Length}>{qsoTimeOff} <band:{band.Length}>{band} <freq:{freq.Length}>{freq} <station_callsign:{myCall.Length}>{myCall} <my_gridsquare:{myGrid.Length}>{myGrid}";
