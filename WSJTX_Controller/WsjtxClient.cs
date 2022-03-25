@@ -46,6 +46,7 @@ namespace WSJTX_Controller
         public int maxPrevCqs = 2;
         public int maxPrevPotaCqs = 4;
         public int maxAutoGenEnqueue = 4;
+        public int maxTimeoutCalls = 2;
 
         private StreamWriter logSw = null;
         private StreamWriter potaSw = null;
@@ -59,6 +60,7 @@ namespace WSJTX_Controller
         private List<string> reportList = new List<string>();
         private Dictionary<string, List<DecodeMessage>> allCallDict = new Dictionary<string, List<DecodeMessage>>();            //all calls to this station (except 73)
         private Dictionary<string, int> cqCallDict = new Dictionary<string, int>();         //cqs sent to specific stations
+        private Dictionary<string, int> timeoutCallDict = new Dictionary<string, int>();    //calls sent to myCall immed after timeout
         private bool txEnabled = false;
         private bool transmitting = false;
         private bool autoCalling = true;
@@ -428,7 +430,7 @@ namespace WSJTX_Controller
                 }
                 else
                 {
-                    if (!prevMode) txTimeout = true;     //stop CQing
+                    //if (!prevMode) txTimeout = true;     //stop CQing     //tempOnly
                 }
 
                 ctrl.ShowMsg($"CAUTION: Automatic transmit!", false);
@@ -716,21 +718,33 @@ namespace WSJTX_Controller
                         latestDecodeTime = dmsg.SinceMidnight;
                         bool recdPrevSignoff = false;
                         rawMode = dmsg.Mode;    //different from mode string in status msg
-                        bool isContest = dmsg.IsContest();
 
                         if (dmsg.New)           //important to reject replays requested by other pgms, also reject all contest msgs
                         {
                             if (dmsg.DeltaFrequency > offsetLoLimit && dmsg.DeltaFrequency < offsetHiLimit) audioOffsets.Add(dmsg.DeltaFrequency);
+
+                            if (dmsg.IsContest())
+                            {
+                                return;
+                            }
 
                             string deCall = dmsg.DeCall();
                             if (dmsg.IsCallTo(myCall))
                             {
                                 DebugOutput($"{dmsg}\n{spacer}msg:'{dmsg.Message}'");
                                 DebugOutput($"{Time()} deCall:'{deCall}' callInProg:'{callInProg}' txEnabled:{txEnabled} transmitting:{transmitting} restartQueue:{restartQueue}");
+                                int prevTimeouts = 0;
+                                timeoutCallDict.TryGetValue(deCall, out prevTimeouts);
+                                if (prevTimeouts >= maxTimeoutCalls)
+                                {
+                                    ctrl.ShowMsg($"Blocking {deCall} temporarily...", false);
+                                    DebugOutput($"{spacer}ignoring call, prevTimeouts:{prevTimeouts} restartQueue:{restartQueue}");
+                                    return;
+                                }
                             }
 
                             //do some processing not directly related to replying immediately
-                            if (deCall != null && !isContest)
+                            if (deCall != null)
                             {
                                 //check for decode being a call to myCall
                                 if (myCall != null && dmsg.IsCallTo(myCall))
@@ -791,49 +805,47 @@ namespace WSJTX_Controller
                                     if (!dmsg.Is73orRR73())       //not a 73 or RR73
                                     {
                                         DebugOutput($"{spacer}Not a 73 or RR73");
-                                        if (isContest && autoCalling)
+                                        if (deCall != callInProg)
                                         {
-                                            DebugOutput($"{spacer}is contest msg");
-                                            if (qsoState == WsjtxMessage.QsoStates.CALLING)         //ignore reply WSJT-X will make
+                                            DebugOutput($"{spacer}{deCall} is not callInProg:{callInProg}");
+                                            if (!callQueue.Contains(deCall))        //call not in queue, enqueue the call data
                                             {
-                                                restartQueue = true;
-                                                DebugOutput($"{spacer}restartQueue:{restartQueue} qsoState:{qsoState}");
+                                                DebugOutput($"{spacer}'{deCall}' not already in queue");
+                                                AddCall(deCall, dmsg);
+                                                Play("blip.wav");
+
+                                                //interrupt CQing for a call to us, if callInProg not getting replies (or already logegd)
+                                                bool noMsgsDeCall = !RecdAnyMsg(callInProg);
+                                                if (noMsgsDeCall) restartQueue = true;
+                                                DebugOutput($"{spacer}noMsgsDeCall:{noMsgsDeCall}  restartQueue:{restartQueue}");
+
+                                                if (transmitting)
+                                                {
+                                                    DebugOutput($"{spacer}decode overlap transmit, qsoState:{qsoState}");
+                                                }
+                                            }
+                                            else       //call is already in queue, update the call data
+                                            {
+                                                DebugOutput($"{spacer}'{deCall}' already in queue");
+                                                UpdateCall(deCall, dmsg);
                                             }
                                         }
-                                        else
+                                        else        //call is in progress
                                         {
-                                            if (deCall != callInProg)
+                                            DebugOutput($"{spacer}{deCall} is callInProg, txTimeout:{txTimeout}");
+                                            if (txTimeout && deCall == tCall)    //just timed out at last Tx
                                             {
-                                                DebugOutput($"{spacer}{deCall} is not callInProg:{callInProg}");
-                                                if (!callQueue.Contains(deCall))        //call not in queue, enqueue the call data
+                                                //this caller might call indefinitely, so count call attempts
+                                                int prevTimeouts = 0;
+                                                if (!timeoutCallDict.TryGetValue(deCall, out prevTimeouts) || prevTimeouts < maxTimeoutCalls)
                                                 {
-                                                    DebugOutput($"{spacer}'{deCall}' not already in queue");
                                                     AddCall(deCall, dmsg);
-                                                    Play("blip.wav");
-
-                                                    //interrupt CQing for a call to us, if callInProg not getting replies (or already logegd)
-                                                    bool noMsgsDeCall = !RecdAnyMsg(callInProg);
-                                                    if (noMsgsDeCall) restartQueue = true;
-                                                    DebugOutput($"{spacer}noMsgsDeCall:{noMsgsDeCall}  restartQueue:{restartQueue}");
-
-                                                    if (transmitting)
+                                                    DebugOutput($"{spacer}Timeout at last Tx for {deCall} prevTimeouts:{prevTimeouts}, re-add to queue");
+                                                    if (prevTimeouts > 0)
                                                     {
-                                                        DebugOutput($"{spacer}decode overlap transmit, qsoState:{qsoState}");
+                                                        timeoutCallDict.Remove(deCall);
                                                     }
-                                                }
-                                                else       //call is already in queue, update the call data
-                                                {
-                                                    DebugOutput($"{spacer}'{deCall}' already in queue");
-                                                    UpdateCall(deCall, dmsg);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                DebugOutput($"{spacer}{deCall} is callInProg, txTimeout:{txTimeout}");
-                                                if (txTimeout && deCall == tCall)    //just timed out at last Tx
-                                                {
-                                                    restartQueue = true;
-                                                    DebugOutput($"{spacer}Timeout at last Tx for {deCall}, restartQueue:{restartQueue}");
+                                                    timeoutCallDict.Add(deCall, prevTimeouts + 1);
                                                 }
                                             }
                                         }
@@ -896,7 +908,6 @@ namespace WSJTX_Controller
                     if (lastTxWatchdog == null) lastTxWatchdog = smsg.TxWatchdog;   //initialize
                     if (lastTxFirst == null) lastTxFirst = txFirst;                     //initialize
                     if (lastDialFrequency == null) lastDialFrequency = smsg.DialFrequency; //initialize
-                    if (lastTxMsg == null) lastTxMsg = txMsg;   //initialize
                     if (smsg.TRPeriod != null) trPeriod = (int)smsg.TRPeriod;
 
                     if (ctrl.timer5.Enabled && smsg.Check == cmdCheck)             //found the random cmd check string, cmd receive ack'd
@@ -1316,10 +1327,23 @@ namespace WSJTX_Controller
                 DebugOutput($"{Time()} CheckNextXmit(1) start: txTimeout:{txTimeout}");
                 DebugOutputStatus();
 
-                //process the next call in the queue. if any present
-                if (callQueue.Count > 0)            //have queued call signs
+                //process the next call in the queue, if any present and correct time period
+                bool timePeriodOk = true;
+                DecodeMessage dmsg = new DecodeMessage();
+                if (replyAndQuit)               //requires correct time period
                 {
-                    DecodeMessage dmsg = new DecodeMessage();
+                    string pCall = PeekNextCall(out dmsg);
+                    if (dmsg != null)
+                    {
+                        bool evenCall = IsEvenPeriod(dmsg.SinceMidnight.Seconds * 1000);
+                        DateTime dtNow = DateTime.UtcNow;
+                        bool evenPer = IsEvenPeriod(((dtNow.Second * 1000) + dtNow.Millisecond + 1500) % 60000);
+                        timePeriodOk = evenCall != evenPer;
+                        DebugOutput($"{spacer}Peek in queue, got '{pCall}' evenCall:{evenCall} evenPer:{evenPer} timePeriodOk:{timePeriodOk}");
+                    }
+                }
+                if (callQueue.Count > 0 && timePeriodOk)            //have queued call signs from correct time period
+                {
                     string nCall = GetNextCall(out dmsg);
                     DebugOutput($"{spacer}Have entries in queue, got '{nCall}'");
 
@@ -1629,7 +1653,7 @@ namespace WSJTX_Controller
                     xmitCycleCount = 0;
                     DebugOutput($"{Time()} Reset(1) (different msg) xmitCycleCount:{xmitCycleCount} txMsg:'{txMsg}' lastTxMsg:'{lastTxMsg}'");
                 }
-                lastTxMsg = txMsg;                  //don't interfere with logging check
+                lastTxMsg = txMsg;
             }
             else        //same "to" call as last xmit, count xmit cycles
             {
@@ -1640,6 +1664,7 @@ namespace WSJTX_Controller
                     if (xmitCycleCount >= (int)ctrl.timeoutNumUpDown.Value - 1)  //n msgs = n-1 diffs
                     {
                         xmitCycleCount = 0;
+                        lastTxMsg = null;
                         txTimeout = true;
                         autoCalling = true;
                         tCall = toCall;        //call to remove from queue, will be null if non-std msg
@@ -1783,7 +1808,11 @@ namespace WSJTX_Controller
         {
             callQueue.Clear();
             callDict.Clear();
-            if (inclCqCalls) cqCallDict.Clear();
+            if (inclCqCalls)
+            {
+                cqCallDict.Clear();
+                timeoutCallDict.Clear();
+            }
             ShowQueue();
             allCallDict.Clear();
             reportList.Clear();
@@ -1918,6 +1947,34 @@ namespace WSJTX_Controller
             }
             DebugOutput($"{Time()} Not enqueued {call}: {CallQueueString()} {CallDictString()}");
             return false;
+        }
+
+        //peek at next call/msg in queue;
+        //queue not assume to have any entries;
+        //return null if failure
+        private string PeekNextCall(out DecodeMessage dmsg)
+        {
+            dmsg = null;
+            if (callQueue.Count == 0)
+            {
+                DebugOutput($"{Time()} No peek: {CallQueueString()} {CallDictString()}");
+                return null;
+            }
+
+            string call = callQueue.Peek();
+
+            if (!callDict.TryGetValue(call, out dmsg))
+            {
+                Console.Beep();
+                DebugOutput("ERROR: '{call}' not found");
+                errorDesc = "'{call}' not found";
+                UpdateDebug();
+                return null;
+            }
+
+            if (WsjtxMessage.Is73(dmsg.Message)) dmsg.Message = dmsg.Message.Replace("73", "");            //important, otherwise WSJT-X will not respond
+            DebugOutput($"{Time()} Peek {call}: msg:'{dmsg.Message}' {CallQueueString()} {CallDictString()}");
+            return call;
         }
 
         //get next call/msg in queue;
