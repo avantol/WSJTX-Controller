@@ -1,6 +1,10 @@
 # WSJTX-Controller
  Provides automation for repetitive manual tasks in WSJT-X
 
+<b><strong>This project has been entirely superseded by the new project <a href="https://github.com/avantol/WSJTX-Controller-v2">Controller V2</a></strong>
+<br>The information below is obsolete and should be used for reference only.</b>
+
+
 WSJTX Controller is a "helper" program that runs alongside WSJT-X, apparently the most popular ham radio program of all time. This "helper" does a lot of the boring WSJT-X manual work for you. (You will need to install a slightly-modified WSJT-X program, available at https://github.com/avantol/WSJT-X2-3-0/blob/main/wsjtx-2.3.0-win64.exe, more info below)
 
 Main project status page is at https://www.qrz.com/db/WM8Q
