@@ -39,7 +39,7 @@ About WSJT-X automation: My take is that FT8 is  no different from "two-way WSPR
 
 There's no better way to optimize your antenna than by testing the transmit and receive performance simultaneously as you make those experimental changes. In contrast, WSPR analytics are intended to analyze only your transmissions (see DXplorer.net for these very valuable analytics). 
 
-Note: The rules about "control operator present" apply, of course. This program helps you, it doesn't replace you. I run it while I'm doing more-productive QSO tasks, like scanning the list of callers (and those called), deciding who gets priority, looking at PSKreporter or QRZ.com, responding to WAS requests, improving this program, etc. If you have strong opinions either way, please email me! (moar.avantol at xoxy.net)
+Note: The rules about "control operator present" apply, of course. This program helps you, it doesn't replace you. I run it while I'm doing more-productive QSO tasks, like scanning the list of callers (and those called), deciding who gets priority, looking at PSKreporter or QRZ.com, responding to WAS requests, improving this program, etc. If you have strong opinions either way, please email me! (more.avantol at xoxy.net)
 
 Notes on installing the modified WSJT-X program:
 - If you already have WSJT-X installed, you may want to install the modified WSJT-X program in an alternate destination folder. Neither version will interfere with the other, you can run both at will, and they share the same settings and preferences.
